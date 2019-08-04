@@ -1,41 +1,21 @@
----
-title: "Mapping the Politics of the New Global South"
-author: "Professor Mark Bradley and Neeraj Sharma"
-date: "7/31/2019"
-output: github_document
----
+# This script imports the raw .txt files and exports an unaltered table of just full speeches and a tidytext-a-fied table as well. 
+# This means that I don't lose any information going from the .txt files to the .csv files which is nice. 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-```
-
-# Introduction
-
-# Setup
-
-Prior to performing analysis on the data collected, it is necessary to prep the work environment so it contains all the vital groundwork for exploration. 
-
-## Load Packages
-
-```{r}
 library(tidyverse)
-library(knitr)
 library(readr)
 library(here)
-library(lubridate)
+library(readtext)
 library(countrycode)
-
 library(tidytext)
 library(stringr)
 library(SnowballC)
-```
 
-## Import Data
 
-```{r}
-corpus_1970 <- read_tsv(here("Data", "raw_speeches_mikhaylov_project.tsv"))
+imported_files <- read_tsv(here("Data", "raw_speeches_mikhaylov_project.tsv"))
 
-continents_1970 <- corpus_1970 %>%
+data(stop_words)
+
+corpus <- imported_files %>%
   mutate(Country = countrycode(Country_ABB, origin = "iso3c", destination = "country.name")) %>%
   # Unknown countries that I have to handmatch are CSK, DDR, EU, YDYE, YUG. These countries aren't in the ISO3c vocab because they no longer exist 
   mutate(Country = ifelse(is.na(Country), ifelse(`Country_ABB` == "CSK", "Czechoslovakia", NA), Country)) %>%
@@ -44,8 +24,7 @@ continents_1970 <- corpus_1970 %>%
   mutate(Country = ifelse(is.na(Country), ifelse(`Country_ABB` == "YDYE", "South Yemen/People's Democratic Republic of Yemen", NA), Country)) %>%
   mutate(Country = ifelse(is.na(Country), ifelse(`Country_ABB` == "YUG", "Yugoslavia", NA), Country))
 
-
-unigrams_corpus_1970 <- continents_1970 %>%
+unigrams <- corpus %>%
   # Expand text of speeches into individual words
   unnest_tokens(output = word, input = text) %>%
   # Removes numbers
@@ -53,10 +32,12 @@ unigrams_corpus_1970 <- continents_1970 %>%
   # Removes stop words
   anti_join(stop_words) %>%
   # Stemms words
-  mutate(word_stem = wordStem(word)) %>%
-  select(-doc_id, -Country_ABB, -word)
+  mutate(word_stem = wordStem(word))
 
-bigrams_corpus_1970 <- continents_1970 %>%
+write_tsv(unigrams, "Data/unigrams_mikhaylov_project.tsv", na = "NA", col_names = TRUE)
+
+# I want to look at bigrams as well because my research centers arounds words like "Third World" and "Global South." Those must be stemmed. 
+bigrams <- corpus %>%
   # Expand text of speeches into individual words
   unnest_tokens(output = word, input = text, token = "ngrams", n = 2) %>%
   # Removes stop words
@@ -66,17 +47,7 @@ bigrams_corpus_1970 <- continents_1970 %>%
   # Removes numbers
   filter(!str_detect(first_word, "^[0-9]*$") & !str_detect(second_word, "^[0-9]*$")) %>%
   # Stemms words
-  mutate(first_word_stem = wordStem(first_word), second_word_stem = wordStem(second_word), word_stem = paste(first_word_stem, second_word_stem, sep = " ")) %>%
-  select(Session, Year, Country, word_stem)
+  mutate(first_word_stem = wordStem(first_word), second_word_stem = wordStem(second_word), word_stem = paste(first_word_stem, second_word_stem, sep = " "))
 
-```
+write_tsv(bigrams, "Data/bigrams_mikhaylov_project.tsv", na = "NA", col_names = TRUE)
 
-## Glimpse at the content
-
-```{r}
-unigrams_corpus_1970
-
-bigrams_corpus_1970
-```
-
-# Analysis 
