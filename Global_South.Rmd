@@ -59,7 +59,7 @@ kable(unigrams_corpus_1970on %>% slice(1:10))
 Bigrams
 
 ```{r}
-kable(bigrams_corpus_1970on %>% slice(1:10))
+kable(bigrams_corpus_1970on %>% filter(Session == 25) %>% slice(1:10))
 ```
 
 # Analysis

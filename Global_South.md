@@ -72,20 +72,20 @@ kable(unigrams_corpus_1970on %>% slice(1:10))
 Bigrams
 
 ``` r
-kable(bigrams_corpus_1970on %>% slice(1:10))
+kable(bigrams_corpus_1970on %>% filter(Session == 25) %>% slice(1:10))
 ```
 
-| Session | Year | Country     | word\_stem         |
-| ------: | ---: | :---------- | :----------------- |
-|      26 | 1971 | Afghanistan | intern post        |
-|      26 | 1971 | Afghanistan | usual courtesi     |
-|      26 | 1971 | Afghanistan | courtesi extend    |
-|      26 | 1971 | Afghanistan | friendli relat     |
-|      26 | 1971 | Afghanistan | person experi      |
-|      26 | 1971 | Afghanistan | intern affair      |
-|      26 | 1971 | Afghanistan | solid ground       |
-|      26 | 1971 | Afghanistan | delegation’ sincer |
-|      26 | 1971 | Afghanistan | sincer appreci     |
-|      26 | 1971 | Afghanistan | ambassador edvard  |
+| Session | Year | Country | word\_stem         |
+| ------: | ---: | :------ | :----------------- |
+|      25 | 1970 | Albania | albanian deleg     |
+|      25 | 1970 | Albania | unit nation        |
+|      25 | 1970 | Albania | peac love          |
+|      25 | 1970 | Albania | satisfactori activ |
+|      25 | 1970 | Albania | unit nation        |
+|      25 | 1970 | Albania | albanian deleg     |
+|      25 | 1970 | Albania | balanc sheet       |
+|      25 | 1970 | Albania | activ cover        |
+|      25 | 1970 | Albania | short period       |
+|      25 | 1970 | Albania | intern organ       |
 
 # Analysis
