@@ -34,6 +34,7 @@ library(countrycode)
 library(tidytext)
 library(stringr)
 library(SnowballC)
+library(textclean)
 ```
 
 ## Import datasets
@@ -62,19 +63,6 @@ Bigrams
 kable(bigrams_corpus_1970on %>% filter(Session == 25) %>% slice(1:10))
 ```
 
-# Sentiment Analysis
-
-```{r}
-# corpus_affin df only contains words that have affinities mapped to them
-unigrams_corpus_affin <- unigrams_corpus_1970on %>% 
-  inner_join(get_sentiments("afinn"), by = c("word_stem" = "word"))
-
-bigrams_corpus_affin <- bigrams_corpus_1970on %>% 
-  inner_join(get_sentiments("afinn"), by = c("first_word_stem" = "word")) %>%
-  inner_join(get_sentiments("afinn"), by = c("second_word_stem" = "word")) %>%
-  mutate(mean_sentiment = (value.x+value.y)/2)
-```
-
 # Common Words by Decade
 
 ```{r}
@@ -83,7 +71,8 @@ UN_stop_words <- tibble(words = c("nation",
                                   "intern", 
                                   "countri", 
                                   "develop", 
-                                  "peac"
+                                  "peac",
+                                  "world"
                                   ))
 ```
 
@@ -95,7 +84,8 @@ seventies_freq <- unigrams_corpus_1970on %>%
   count(sort = TRUE) %>%
   arrange(desc(n)) %>%
   ungroup() %>%
-  slice(1:10)
+  mutate(percent = n/sum(n)) #%>%
+#  slice(1:10)
 
 ninties_freq <- unigrams_corpus_1970on %>%
   filter(Year == 1990) %>%
@@ -104,7 +94,8 @@ ninties_freq <- unigrams_corpus_1970on %>%
   count(sort = TRUE) %>%
   arrange(desc(n)) %>%
   ungroup() %>%
-  slice(1:10)
+  mutate(percent = n/sum(n)) #%>%
+#  slice(1:10)
 
 tens_freq <- unigrams_corpus_1970on %>%
   filter(Year == 2010) %>%
@@ -113,24 +104,40 @@ tens_freq <- unigrams_corpus_1970on %>%
   count(sort = TRUE) %>%
   arrange(desc(n)) %>%
   ungroup() %>%
-  slice(1:10)
+  mutate(percent = n/sum(n))# %>%
+#  slice(1:10)
 
-ggplot(data = seventies_freq, mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
+ggplot(data = seventies_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
   geom_col() +
   geom_text(hjust = 1.5, fontface = "bold", color = "White") +
   coord_flip() +
   labs(title = "Most common words in 1970", x = "Words (Stemmed)", y = "Number of Mentions")
 
-ggplot(data = ninties_freq, mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
+ggplot(data = ninties_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
   geom_col() +
   geom_text(hjust = 1.5, fontface = "bold", color = "White") +
   coord_flip() +
   labs(title = "Most common words in 1990", x = "Words (Stemmed)", y = "Number of Mentions")
 
-ggplot(data = tens_freq, mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
+ggplot(data = tens_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
   geom_col() +
   geom_text(hjust = 1.5, fontface = "bold", color = "White") +
   coord_flip() +
   labs(title = "Most common words in 2010", x = "Words (Stemmed)", y = "Number of Mentions")
 
+```
+
+# Sentiment Analysis
+
+This is for a later time and wasn't the focus of this project update. I'm keeping this here just so I have it in my backpocket for when it does become important later on in the project. 
+
+```{r}
+# corpus_affin df only contains words that have affinities mapped to them
+unigrams_corpus_affin <- unigrams_corpus_1970on %>% 
+  inner_join(get_sentiments("afinn"), by = c("word_stem" = "word"))
+
+bigrams_corpus_affin <- bigrams_corpus_1970on %>% 
+  inner_join(get_sentiments("afinn"), by = c("first_word_stem" = "word")) %>%
+  inner_join(get_sentiments("afinn"), by = c("second_word_stem" = "word")) %>%
+  mutate(mean_sentiment = (value.x+value.y)/2)
 ```

@@ -1,4 +1,4 @@
-Mapping the Politics of the New Global South
+Mapping the Politics of the New Global South, Progress Update
 ================
 Neeraj Sharma
 7/31/2019
@@ -32,6 +32,7 @@ library(countrycode)
 library(tidytext)
 library(stringr)
 library(SnowballC)
+library(textclean)
 ```
 
 ## Import datasets
@@ -45,7 +46,7 @@ unigrams_corpus_1970on <- read_tsv(here::here("Data", "unigrams_mikhaylov_projec
   select(Session, Year, Country, word_stem)
 
 bigrams_corpus_1970on <- read_tsv(here::here("Data", "bigrams_mikhaylov_project.tsv")) %>%
-  select(Session, Year, Country, word_stem)
+  select(Session, Year, Country, first_word_stem, second_word_stem, word_stem)
 ```
 
 ## Glimpse at the content of the datasets
@@ -75,17 +76,106 @@ Bigrams
 kable(bigrams_corpus_1970on %>% filter(Session == 25) %>% slice(1:10))
 ```
 
-| Session | Year | Country | word\_stem         |
-| ------: | ---: | :------ | :----------------- |
-|      25 | 1970 | Albania | albanian deleg     |
-|      25 | 1970 | Albania | unit nation        |
-|      25 | 1970 | Albania | peac love          |
-|      25 | 1970 | Albania | satisfactori activ |
-|      25 | 1970 | Albania | unit nation        |
-|      25 | 1970 | Albania | albanian deleg     |
-|      25 | 1970 | Albania | balanc sheet       |
-|      25 | 1970 | Albania | activ cover        |
-|      25 | 1970 | Albania | short period       |
-|      25 | 1970 | Albania | intern organ       |
+| Session | Year | Country | first\_word\_stem | second\_word\_stem | word\_stem         |
+| ------: | ---: | :------ | :---------------- | :----------------- | :----------------- |
+|      25 | 1970 | Albania | albanian          | deleg              | albanian deleg     |
+|      25 | 1970 | Albania | unit              | nation             | unit nation        |
+|      25 | 1970 | Albania | peac              | love               | peac love          |
+|      25 | 1970 | Albania | satisfactori      | activ              | satisfactori activ |
+|      25 | 1970 | Albania | unit              | nation             | unit nation        |
+|      25 | 1970 | Albania | albanian          | deleg              | albanian deleg     |
+|      25 | 1970 | Albania | balanc            | sheet              | balanc sheet       |
+|      25 | 1970 | Albania | activ             | cover              | activ cover        |
+|      25 | 1970 | Albania | short             | period             | short period       |
+|      25 | 1970 | Albania | intern            | organ              | intern organ       |
 
-# Analysis
+# Common Words by Decade
+
+``` r
+UN_stop_words <- tibble(words = c("nation", 
+                                  "unit", 
+                                  "intern", 
+                                  "countri", 
+                                  "develop", 
+                                  "peac",
+                                  "world"
+                                  ))
+```
+
+``` r
+seventies_freq <- unigrams_corpus_1970on %>%
+  filter(Year == 1970) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n)) #%>%
+#  slice(1:10)
+
+ninties_freq <- unigrams_corpus_1970on %>%
+  filter(Year == 1990) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n)) #%>%
+#  slice(1:10)
+
+tens_freq <- unigrams_corpus_1970on %>%
+  filter(Year == 2010) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n))# %>%
+#  slice(1:10)
+
+ggplot(data = seventies_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
+  coord_flip() +
+  labs(title = "Most common words in 1970", x = "Words (Stemmed)", y = "Number of Mentions")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+``` r
+ggplot(data = ninties_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
+  coord_flip() +
+  labs(title = "Most common words in 1990", x = "Words (Stemmed)", y = "Number of Mentions")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
+
+``` r
+ggplot(data = tens_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
+  coord_flip() +
+  labs(title = "Most common words in 2010", x = "Words (Stemmed)", y = "Number of Mentions")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
+
+# Sentiment Analysis
+
+This is for a later time and wasn’t the focus of this project update.
+I’m keeping this here just so I have it in my backpocket for when it
+does become important later on in the
+project.
+
+``` r
+# corpus_affin df only contains words that have affinities mapped to them
+unigrams_corpus_affin <- unigrams_corpus_1970on %>% 
+  inner_join(get_sentiments("afinn"), by = c("word_stem" = "word"))
+
+bigrams_corpus_affin <- bigrams_corpus_1970on %>% 
+  inner_join(get_sentiments("afinn"), by = c("first_word_stem" = "word")) %>%
+  inner_join(get_sentiments("afinn"), by = c("second_word_stem" = "word")) %>%
+  mutate(mean_sentiment = (value.x+value.y)/2)
+```

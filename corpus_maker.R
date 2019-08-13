@@ -9,6 +9,7 @@ library(countrycode)
 library(tidytext)
 library(stringr)
 library(SnowballC)
+library(textclean)
 
 
 imported_files <- read_tsv(here("Data", "raw_speeches_mikhaylov_project.tsv"))
@@ -31,10 +32,11 @@ unigrams <- corpus %>%
   filter(!str_detect(word, "^[0-9]*$")) %>%
   # Removes stop words
   anti_join(stop_words) %>%
+  # removes apostrophies
+  mutate(word = strip(unigrams$word, apostrophe.remove = TRUE)) %>%
   # Stemms words
   mutate(word_stem = wordStem(word))
 
-write_tsv(unigrams, "Data/unigrams_mikhaylov_project.tsv", na = "NA", col_names = TRUE)
 
 # I want to look at bigrams as well because my research centers arounds words like "Third World" and "Global South." Those must be stemmed. 
 bigrams <- corpus %>%
@@ -46,8 +48,13 @@ bigrams <- corpus %>%
   anti_join(stop_words, by = c("second_word" = "word")) %>%
   # Removes numbers
   filter(!str_detect(first_word, "^[0-9]*$") & !str_detect(second_word, "^[0-9]*$")) %>%
+  # removes apostrophies
+  mutate(first_word = strip(unigrams$first_word, apostrophe.remove = TRUE)) %>%
+  mutate(second_word = strip(unigrams$second_word, apostrophe.remove = TRUE)) %>%
   # Stemms words
   mutate(first_word_stem = wordStem(first_word), second_word_stem = wordStem(second_word), word_stem = paste(first_word_stem, second_word_stem, sep = " "))
 
+
+write_tsv(unigrams, "Data/unigrams_mikhaylov_project.tsv", na = "NA", col_names = TRUE)
 write_tsv(bigrams, "Data/bigrams_mikhaylov_project.tsv", na = "NA", col_names = TRUE)
 
