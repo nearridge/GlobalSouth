@@ -110,8 +110,7 @@ seventies_freq <- unigrams_corpus_1970on %>%
   count(sort = TRUE) %>%
   arrange(desc(n)) %>%
   ungroup() %>%
-  mutate(percent = n/sum(n)) #%>%
-#  slice(1:10)
+  mutate(percent = n/sum(n))
 
 ninties_freq <- unigrams_corpus_1970on %>%
   filter(Year == 1990) %>%
@@ -120,8 +119,7 @@ ninties_freq <- unigrams_corpus_1970on %>%
   count(sort = TRUE) %>%
   arrange(desc(n)) %>%
   ungroup() %>%
-  mutate(percent = n/sum(n)) #%>%
-#  slice(1:10)
+  mutate(percent = n/sum(n))
 
 tens_freq <- unigrams_corpus_1970on %>%
   filter(Year == 2010) %>%
@@ -130,8 +128,7 @@ tens_freq <- unigrams_corpus_1970on %>%
   count(sort = TRUE) %>%
   arrange(desc(n)) %>%
   ungroup() %>%
-  mutate(percent = n/sum(n))# %>%
-#  slice(1:10)
+  mutate(percent = n/sum(n))
 
 ggplot(data = seventies_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
   geom_col() +
@@ -161,6 +158,67 @@ ggplot(data = tens_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n)
 ```
 
 ![](Global_South_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
+
+# Looking at specific countries keywords changing over time
+
+I was encouraged by Professor Bradley to investigate keyword trends over
+time in the following countries:
+
+*Indonesia *Algeria *Kenya *Mexico \*Egypt
+
+Here is what emerged based on this analysis.
+
+``` r
+indonesia <- unigrams_corpus_1970on %>%
+  filter(Country == "Indonesia") %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n)) %>%
+  slice(1:30)
+
+algeria <- unigrams_corpus_1970on %>%
+  filter(Country == "Algeria") %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n)) %>%
+  slice(1:30)
+
+kenya <- unigrams_corpus_1970on %>%
+  filter(Country == "Kenya") %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n)) %>%
+  slice(1:30)
+
+mexico <- unigrams_corpus_1970on %>%
+  filter(Country == "Mexico") %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n)) %>%
+  slice(1:30)
+
+egypt<- unigrams_corpus_1970on %>%
+  filter(Country == "Egypt") %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n)) %>%
+  slice(1:30)
+```
 
 # Sentiment Analysis
 

@@ -33,7 +33,7 @@ unigrams <- corpus %>%
   # Removes stop words
   anti_join(stop_words) %>%
   # removes apostrophies
-  mutate(word = strip(unigrams$word, apostrophe.remove = TRUE)) %>%
+  mutate(word = strip(word, apostrophe.remove = TRUE)) %>%
   # Stemms words
   mutate(word_stem = wordStem(word))
 
@@ -49,8 +49,8 @@ bigrams <- corpus %>%
   # Removes numbers
   filter(!str_detect(first_word, "^[0-9]*$") & !str_detect(second_word, "^[0-9]*$")) %>%
   # removes apostrophies
-  mutate(first_word = strip(unigrams$first_word, apostrophe.remove = TRUE)) %>%
-  mutate(second_word = strip(unigrams$second_word, apostrophe.remove = TRUE)) %>%
+  mutate(first_word = strip(first_word, apostrophe.remove = TRUE)) %>%
+  mutate(second_word = strip(second_word, apostrophe.remove = TRUE)) %>%
   # Stemms words
   mutate(first_word_stem = wordStem(first_word), second_word_stem = wordStem(second_word), word_stem = paste(first_word_stem, second_word_stem, sep = " "))
 
