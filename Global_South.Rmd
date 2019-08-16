@@ -43,7 +43,7 @@ These datasets were produced through the corpus_maker.R script. The original sou
 
 ```{r}
 unigrams_corpus_1970on <- read_tsv(here::here("Data", "unigrams_mikhaylov_project.tsv")) %>%
-  select(Session, Year, Country, word_stem)
+  select(Session, Year, Country, word, word_stem)
 
 bigrams_corpus_1970on <- read_tsv(here::here("Data", "bigrams_mikhaylov_project.tsv")) %>%
   select(Session, Year, Country, first_word_stem, second_word_stem, word_stem)
@@ -72,7 +72,11 @@ UN_stop_words <- tibble(words = c("nation",
                                   "countri", 
                                   "develop", 
                                   "peac",
-                                  "world"
+                                  "world",
+                                  "peopl",
+                                  # Stops countries from counting their own names as very commonly repeated words. 
+                                  # Stripping removes casing. This takes codelist from countrycode.
+                                  strip(codelist$country.name.en)
                                   ))
 ```
 
@@ -134,6 +138,28 @@ I was encouraged by Professor Bradley to investigate keyword trends over time in
 *Egypt
 
 Here is what emerged based on this analysis. 
+
+```{r}
+indonesia_count_word_year <- unigrams_corpus_1970on %>%
+  filter(Country == "Indonesia") %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(Year, word_stem) %>%
+  count() %>%
+  group_by(Year) %>%
+  top_n(n = 5) %>%
+  ungroup() %>%
+  mutate(Year = as.factor(Year)) %>%
+  slice(1:10)
+
+indonesia_count_word_year
+
+
+ggplot(data = indonesia_count_word_year, mapping = aes(x = Year, y = n, label = word_stem)) +
+  geom_bar(aes(fill = word_stem), position = "dodge", stat="identity") +
+  geom_text(hjust = 1.5, fontface = "bold", color = "Black", position = "dodge")
+  
+  
+```
 
 ```{r}
 indonesia <- unigrams_corpus_1970on %>%
