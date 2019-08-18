@@ -43,7 +43,7 @@ Mikhaylov.
 
 ``` r
 unigrams_corpus_1970on <- read_tsv(here::here("Data", "unigrams_mikhaylov_project.tsv")) %>%
-  select(Session, Year, Country, word_stem)
+  select(Session, Year, Country, word, word_stem)
 
 bigrams_corpus_1970on <- read_tsv(here::here("Data", "bigrams_mikhaylov_project.tsv")) %>%
   select(Session, Year, Country, first_word_stem, second_word_stem, word_stem)
@@ -57,18 +57,18 @@ Unigrams
 kable(unigrams_corpus_1970on %>% slice(1:10))
 ```
 
-| Session | Year | Country | word\_stem |
-| ------: | ---: | :------ | :--------- |
-|      25 | 1970 | Albania | convei     |
-|      25 | 1970 | Albania | presid     |
-|      25 | 1970 | Albania | congratul  |
-|      25 | 1970 | Albania | albanian   |
-|      25 | 1970 | Albania | deleg      |
-|      25 | 1970 | Albania | elect      |
-|      25 | 1970 | Albania | presid     |
-|      25 | 1970 | Albania | twenti     |
-|      25 | 1970 | Albania | session    |
-|      25 | 1970 | Albania | assembli   |
+| Session | Year | Country | word            | word\_stem |
+| ------: | ---: | :------ | :-------------- | :--------- |
+|      25 | 1970 | Albania | convey          | convei     |
+|      25 | 1970 | Albania | president       | presid     |
+|      25 | 1970 | Albania | congratulations | congratul  |
+|      25 | 1970 | Albania | albanian        | albanian   |
+|      25 | 1970 | Albania | delegation      | deleg      |
+|      25 | 1970 | Albania | election        | elect      |
+|      25 | 1970 | Albania | presidency      | presid     |
+|      25 | 1970 | Albania | twenty          | twenti     |
+|      25 | 1970 | Albania | session         | session    |
+|      25 | 1970 | Albania | assembly        | assembli   |
 
 Bigrams
 
@@ -98,7 +98,11 @@ UN_stop_words <- tibble(words = c("nation",
                                   "countri", 
                                   "develop", 
                                   "peac",
-                                  "world"
+                                  "world",
+                                  "peopl",
+                                  # Stops countries from counting their own names as very commonly repeated words. 
+                                  # Stripping removes casing. This takes codelist from countrycode.
+                                  strip(codelist$country.name.en)
                                   ))
 ```
 
@@ -167,6 +171,69 @@ time in the following countries:
 *Indonesia *Algeria *Kenya *Mexico \*Egypt
 
 Here is what emerged based on this analysis.
+
+``` r
+indonesia_count_word_year <- unigrams_corpus_1970on %>%
+  filter(Country == "Indonesia") %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+#  mutate(Year = cut(Year, breaks=c(1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2018), right = FALSE)) %>%
+  group_by(Year, word_stem) %>%
+  count() %>%
+  group_by(Year) %>%
+  top_n(n = 5) %>%
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Year = as.factor(Year)) %>%
+  slice(1:28)
+#  slice(1:40)
+indonesia_count_word_year
+```
+
+    ## # A tibble: 28 x 3
+    ##    Year  word_stem     n
+    ##    <fct> <chr>     <int>
+    ##  1 1970  deleg        13
+    ##  2 1970  econom        8
+    ##  3 1970  govern        8
+    ##  4 1970  hope          8
+    ##  5 1970  sea           8
+    ##  6 1971  resolut      14
+    ##  7 1971  hope         12
+    ##  8 1971  secur        12
+    ##  9 1971  continu      11
+    ## 10 1971  confer        9
+    ## # … with 18 more rows
+
+``` r
+# paste(indonesia_count_word_year$word_stem, indonesia_count_word_year$n, sep = ", ")
+
+ggplot(data = indonesia_count_word_year, mapping = aes(x = Year, y = n, label = word_stem)) +
+  geom_col(aes(group = sort(as.factor(word_stem), decreasing = TRUE)), color = "White", position = "dodge") +
+  geom_text(position = position_dodge(0.9), aes(group = sort(as.factor(word_stem), decreasing = TRUE), hjust = 1.5), color = "White") +
+  labs(title = "ggplot with decreasing as the item") +
+  coord_flip()
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+``` r
+ggplot(data = indonesia_count_word_year, mapping = aes(x = Year, y = n, label = word_stem)) +
+  geom_col(aes(group = sort(as.factor(word_stem), descending = TRUE)), color = "White", position = "dodge") +
+  geom_text(position = position_dodge(0.9), aes(group = sort(as.factor(word_stem), descending = TRUE), hjust = 1.5), color = "White") +
+  labs(title = "ggplot with descending as the item") +
+  coord_flip()
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
+
+``` r
+ggplot(data = indonesia_count_word_year, mapping = aes(x = Year, y = n, label = word_stem)) +
+  geom_col(aes(group = word_stem), color = "White", position = "dodge") +
+  geom_text(position = position_dodge(0.9), aes(group = word_stem, hjust = 1.5), color = "White") +
+  coord_flip()
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-7-3.png)<!-- -->
 
 ``` r
 indonesia <- unigrams_corpus_1970on %>%
