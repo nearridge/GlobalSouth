@@ -159,8 +159,8 @@ ggplot(data = indonesia_count_word_year, mapping = aes(x = name, y = n, fill = Y
     coord_flip() +
     scale_x_reordered() +
     scale_y_continuous(expand = c(0,0)) +
-    labs(y = "Words",
-         x = "Count",
+    labs(y = "Count",
+         x = NULL,
          title = "Most Common Words Over Time (Indonesia)")
 ```
 

@@ -185,35 +185,16 @@ indonesia_count_word_year <- unigrams_corpus_1970on %>%
   ungroup() %>%
   mutate(Year = as.factor(Year),
            name = reorder_within(word_stem, n, Year))
-indonesia_count_word_year
-```
 
-    ## # A tibble: 51 x 4
-    ##    Year        word_stem     n name                  
-    ##    <fct>       <chr>     <int> <fct>                 
-    ##  1 [1970,1975] deleg        87 deleg___[1970,1975]   
-    ##  2 [1970,1975] econom       84 econom___[1970,1975]  
-    ##  3 [1970,1975] effort       77 effort___[1970,1975]  
-    ##  4 [1970,1975] assembli     64 assembli___[1970,1975]
-    ##  5 [1970,1975] continu      62 continu___[1970,1975] 
-    ##  6 (1975,1980] econom      100 econom___(1975,1980]  
-    ##  7 (1975,1980] session      77 session___(1975,1980] 
-    ##  8 (1975,1980] effort       64 effort___(1975,1980]  
-    ##  9 (1975,1980] deleg        62 deleg___(1975,1980]   
-    ## 10 (1975,1980] east         62 east___(1975,1980]    
-    ## # … with 41 more rows
-
-``` r
 ggplot(data = indonesia_count_word_year, mapping = aes(x = name, y = n, fill = Year)) +
     geom_col(show.legend = FALSE) +
     facet_wrap(~Year, scales = "free_y") +
     coord_flip() +
     scale_x_reordered() +
     scale_y_continuous(expand = c(0,0)) +
-    labs(y = "Number of babies per decade",
+    labs(y = "Count",
          x = NULL,
-         title = "What were the most common baby names in each decade?",
-         subtitle = "Via US Social Security Administration")
+         title = "Most Common Words Over Time (Indonesia)")
 ```
 
 ![](Global_South_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
