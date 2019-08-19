@@ -150,7 +150,8 @@ indonesia_count_word_year <- unigrams_corpus_1970on %>%
   top_n(n = 5) %>%
   arrange(desc(n), .by_group = TRUE) %>%
   ungroup() %>%
-  mutate(Year = as.factor(Year)) %>%
+#  mutate(Year = as.factor(Year)) %>%
+  mutate(word_stem = as.factor(word_stem)) %>%
   slice(1:28)
 #  slice(1:40)
 indonesia_count_word_year
@@ -158,8 +159,8 @@ indonesia_count_word_year
 # paste(indonesia_count_word_year$word_stem, indonesia_count_word_year$n, sep = ", ")
 
 ggplot(data = indonesia_count_word_year, mapping = aes(x = Year, y = n, label = word_stem)) +
-  geom_col(aes(group = sort(as.factor(word_stem), decreasing = TRUE)), color = "White", position = "dodge") +
-  geom_text(position = position_dodge(0.9), aes(group = sort(as.factor(word_stem), decreasing = TRUE), hjust = 1.5), color = "White") +
+  geom_col(aes(group = sort(word_stem, decreasing = TRUE)), color = "White", position = "dodge") +
+  geom_text(position = position_dodge(0.9), aes(group = sort(word_stem, decreasing = TRUE), hjust = 1.5), color = "White") +
   labs(title = "ggplot with decreasing as the item") +
   coord_flip()
 
