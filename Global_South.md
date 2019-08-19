@@ -176,64 +176,47 @@ Here is what emerged based on this analysis.
 indonesia_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Indonesia") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-#  mutate(Year = cut(Year, breaks=c(1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2018), right = FALSE)) %>%
-  group_by(Year, word_stem) %>%
-  count() %>%
+  mutate(Year = cut_interval(Year, length = 5)) %>%
+  group_by(Year) %>%
+  count(word_stem) %>%
   group_by(Year) %>%
   top_n(n = 5) %>%
   arrange(desc(n), .by_group = TRUE) %>%
   ungroup() %>%
-  mutate(Year = as.factor(Year)) %>%
-  slice(1:28)
-#  slice(1:40)
+  mutate(Year = as.factor(Year),
+           name = reorder_within(word_stem, n, Year))
 indonesia_count_word_year
 ```
 
-    ## # A tibble: 28 x 3
-    ##    Year  word_stem     n
-    ##    <fct> <chr>     <int>
-    ##  1 1970  deleg        13
-    ##  2 1970  econom        8
-    ##  3 1970  govern        8
-    ##  4 1970  hope          8
-    ##  5 1970  sea           8
-    ##  6 1971  resolut      14
-    ##  7 1971  hope         12
-    ##  8 1971  secur        12
-    ##  9 1971  continu      11
-    ## 10 1971  confer        9
-    ## # … with 18 more rows
+    ## # A tibble: 51 x 4
+    ##    Year        word_stem     n name                  
+    ##    <fct>       <chr>     <int> <fct>                 
+    ##  1 [1970,1975] deleg        87 deleg___[1970,1975]   
+    ##  2 [1970,1975] econom       84 econom___[1970,1975]  
+    ##  3 [1970,1975] effort       77 effort___[1970,1975]  
+    ##  4 [1970,1975] assembli     64 assembli___[1970,1975]
+    ##  5 [1970,1975] continu      62 continu___[1970,1975] 
+    ##  6 (1975,1980] econom      100 econom___(1975,1980]  
+    ##  7 (1975,1980] session      77 session___(1975,1980] 
+    ##  8 (1975,1980] effort       64 effort___(1975,1980]  
+    ##  9 (1975,1980] deleg        62 deleg___(1975,1980]   
+    ## 10 (1975,1980] east         62 east___(1975,1980]    
+    ## # … with 41 more rows
 
 ``` r
-# paste(indonesia_count_word_year$word_stem, indonesia_count_word_year$n, sep = ", ")
-
-ggplot(data = indonesia_count_word_year, mapping = aes(x = Year, y = n, label = word_stem)) +
-  geom_col(aes(group = sort(as.factor(word_stem), decreasing = TRUE)), color = "White", position = "dodge") +
-  geom_text(position = position_dodge(0.9), aes(group = sort(as.factor(word_stem), decreasing = TRUE), hjust = 1.5), color = "White") +
-  labs(title = "ggplot with decreasing as the item") +
-  coord_flip()
+ggplot(data = indonesia_count_word_year, mapping = aes(x = name, y = n, fill = Year)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~Year, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(y = "Number of babies per decade",
+         x = NULL,
+         title = "What were the most common baby names in each decade?",
+         subtitle = "Via US Social Security Administration")
 ```
 
 ![](Global_South_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
-
-``` r
-ggplot(data = indonesia_count_word_year, mapping = aes(x = Year, y = n, label = word_stem)) +
-  geom_col(aes(group = sort(as.factor(word_stem), descending = TRUE)), color = "White", position = "dodge") +
-  geom_text(position = position_dodge(0.9), aes(group = sort(as.factor(word_stem), descending = TRUE), hjust = 1.5), color = "White") +
-  labs(title = "ggplot with descending as the item") +
-  coord_flip()
-```
-
-![](Global_South_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
-
-``` r
-ggplot(data = indonesia_count_word_year, mapping = aes(x = Year, y = n, label = word_stem)) +
-  geom_col(aes(group = word_stem), color = "White", position = "dodge") +
-  geom_text(position = position_dodge(0.9), aes(group = word_stem, hjust = 1.5), color = "White") +
-  coord_flip()
-```
-
-![](Global_South_files/figure-gfm/unnamed-chunk-7-3.png)<!-- -->
 
 ``` r
 indonesia <- unigrams_corpus_1970on %>%
