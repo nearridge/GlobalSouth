@@ -3,94 +3,6 @@ Mapping the Politics of the New Global South, Progress Update
 Neeraj Sharma
 7/31/2019
 
-# Introduction
-
-I am working for Professor Mark Bradley in the History Department at the
-University of Chicago this summer on his research project, Mapping the
-Politics of the New Global South.
-
-# Setup
-
-Prior to performing analysis on the data collected, it is necessary to
-prep the work environment so it contains all the packages necessary for
-exploration.
-
-## Load Packages
-
-``` r
-# Relevant to data importation, structuring and visualization
-library(tidyverse)
-library(knitr)
-library(readr)
-library(here)
-
-# Relevant to data formatting
-library(lubridate)
-library(countrycode)
-
-# Relevant to text analysis
-library(tidytext)
-library(stringr)
-library(SnowballC)
-library(textclean)
-```
-
-## Import datasets
-
-These datasets were produced through the corpus\_maker.R script. The
-original source files are from
-Mikhaylov.
-
-``` r
-unigrams_corpus_1970on <- read_tsv(here::here("Data", "unigrams_mikhaylov_project.tsv")) %>%
-  select(Session, Year, Country, word, word_stem)
-
-bigrams_corpus_1970on <- read_tsv(here::here("Data", "bigrams_mikhaylov_project.tsv")) %>%
-  select(Session, Year, Country, first_word_stem, second_word_stem, word_stem)
-```
-
-## Glimpse at the content of the datasets
-
-Unigrams
-
-``` r
-kable(unigrams_corpus_1970on %>% slice(1:10))
-```
-
-| Session | Year | Country | word            | word\_stem |
-| ------: | ---: | :------ | :-------------- | :--------- |
-|      25 | 1970 | Albania | convey          | convei     |
-|      25 | 1970 | Albania | president       | presid     |
-|      25 | 1970 | Albania | congratulations | congratul  |
-|      25 | 1970 | Albania | albanian        | albanian   |
-|      25 | 1970 | Albania | delegation      | deleg      |
-|      25 | 1970 | Albania | election        | elect      |
-|      25 | 1970 | Albania | presidency      | presid     |
-|      25 | 1970 | Albania | twenty          | twenti     |
-|      25 | 1970 | Albania | session         | session    |
-|      25 | 1970 | Albania | assembly        | assembli   |
-
-Bigrams
-
-``` r
-kable(bigrams_corpus_1970on %>% filter(Session == 25) %>% slice(1:10))
-```
-
-| Session | Year | Country | first\_word\_stem | second\_word\_stem | word\_stem         |
-| ------: | ---: | :------ | :---------------- | :----------------- | :----------------- |
-|      25 | 1970 | Albania | albanian          | deleg              | albanian deleg     |
-|      25 | 1970 | Albania | unit              | nation             | unit nation        |
-|      25 | 1970 | Albania | peac              | love               | peac love          |
-|      25 | 1970 | Albania | satisfactori      | activ              | satisfactori activ |
-|      25 | 1970 | Albania | unit              | nation             | unit nation        |
-|      25 | 1970 | Albania | albanian          | deleg              | albanian deleg     |
-|      25 | 1970 | Albania | balanc            | sheet              | balanc sheet       |
-|      25 | 1970 | Albania | activ             | cover              | activ cover        |
-|      25 | 1970 | Albania | short             | period             | short period       |
-|      25 | 1970 | Albania | intern            | organ              | intern organ       |
-
-# Common Words by Decade
-
 ``` r
 UN_stop_words <- tibble(words = c("nation", 
                                   "unit", 
@@ -100,157 +12,103 @@ UN_stop_words <- tibble(words = c("nation",
                                   "peac",
                                   "world",
                                   "peopl",
-                                  # Stops countries from counting their own names as very commonly repeated words. 
-                                  # Stripping removes casing. This takes codelist from countrycode.
+                                  "deleg",
+                                  # Stops countries from counting their own names as very commonly repeated words. Stripping removes casing. This takes codelist from countrycode. It might be bad because it eliminates when speeches mention other countries. 
                                   strip(codelist$country.name.en)
                                   ))
 ```
 
-``` r
-seventies_freq <- unigrams_corpus_1970on %>%
-  filter(Year == 1970) %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n))
+# Common Words by Decade
 
-ninties_freq <- unigrams_corpus_1970on %>%
-  filter(Year == 1990) %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n))
+![](Global_South_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->![](Global_South_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->![](Global_South_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
 
-tens_freq <- unigrams_corpus_1970on %>%
-  filter(Year == 2010) %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n))
-
-ggplot(data = seventies_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
-  geom_col() +
-  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
-  coord_flip() +
-  labs(title = "Most common words in 1970", x = "Words (Stemmed)", y = "Number of Mentions")
-```
-
-![](Global_South_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
-
-``` r
-ggplot(data = ninties_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
-  geom_col() +
-  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
-  coord_flip() +
-  labs(title = "Most common words in 1990", x = "Words (Stemmed)", y = "Number of Mentions")
-```
-
-![](Global_South_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
-
-``` r
-ggplot(data = tens_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
-  geom_col() +
-  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
-  coord_flip() +
-  labs(title = "Most common words in 2010", x = "Words (Stemmed)", y = "Number of Mentions")
-```
-
-![](Global_South_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
-
-# Looking at specific countries keywords changing over time
+# Looking at specific countries common words over time
 
 I was encouraged by Professor Bradley to investigate keyword trends over
 time in the following countries:
 
-*Indonesia *Algeria *Kenya *Mexico \*Egypt
+  - Indonesia
+  - Algeria
+  - Kenya
+  - Mexico
+  - Egypt
 
-Here is what emerged based on this analysis.
+What I’ve done is to group the speeches of each country into 5 year
+increments and then took the top 10 words identified in each chunk. This
+allows us to see what keywords rise and fall over time. Here is what
+emerged based on this analysis.
 
-``` r
-indonesia_count_word_year <- unigrams_corpus_1970on %>%
-  filter(Country == "Indonesia") %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  mutate(Year = cut_interval(Year, length = 5)) %>%
-  group_by(Year) %>%
-  count(word_stem) %>%
-  group_by(Year) %>%
-  top_n(n = 5) %>%
-  arrange(desc(n), .by_group = TRUE) %>%
-  ungroup() %>%
-  mutate(Year = as.factor(Year),
-           name = reorder_within(word_stem, n, Year))
-
-ggplot(data = indonesia_count_word_year, mapping = aes(x = name, y = n, fill = Year)) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(~Year, scales = "free_y") +
-    coord_flip() +
-    scale_x_reordered() +
-    scale_y_continuous(expand = c(0,0)) +
-    labs(y = "Count",
-         x = NULL,
-         title = "Most Common Words Over Time (Indonesia)")
-```
+## Indonesia
 
 ![](Global_South_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
-``` r
-indonesia <- unigrams_corpus_1970on %>%
-  filter(Country == "Indonesia") %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+Interesting observations:
 
-algeria <- unigrams_corpus_1970on %>%
-  filter(Country == "Algeria") %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+  - The word “Partnership” arises in the range of 2006-2010. This is
+    interesting because it’s right at the start of the rise of the usage
+    of the term “Global South” per my understanding, which is importent
+    as it indicates a shift towards a cooperative outlook towards
+    foreign policy potentially.
+  - ASEAN becoming a continually present term starting in 2000.
+  - Words like “commit,” “goal,” etc. appear more in the later years.
+    Generally, the tone is more outward looking and cooperative.
 
-kenya <- unigrams_corpus_1970on %>%
-  filter(Country == "Kenya") %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+## Algeria
 
-mexico <- unigrams_corpus_1970on %>%
-  filter(Country == "Mexico") %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+![](Global_South_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
-egypt<- unigrams_corpus_1970on %>%
-  filter(Country == "Egypt") %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n)) %>%
-  slice(1:30)
-```
+Interesting observations:
 
+  - Terrorism is a key phrase mentioned a lot during the later period of
+    the civil war.
+  - Crisis is said a lot in 1980s. Not exactly sure why that’s the case.
+    I don’t know much about Algeria but my quick internet investigation
+    couldn’t reveal anything obvious.
+  - Any changes from 1970 to 2018 not as apparent as other countries.
+    It’s not the most revealing country to see changes in the
+    discourse surrounding development.
+
+## Kenya
+
+![](Global_South_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+Interesting observations:
+
+  - Cooperate and global appear as keywords in 1990-1995.
+  - Language of cooperation definately has changed in the early period
+    compared to the late period.
+  - Relations with Somalia seem to be very important in the late 2000s.
+    They seem to have started campaigns against Al-Shabab around that
+    time.
+  - This trend appears to continue through the rest of the 2000s with
+    mentions of Sudan, Somalia again, Support, and Sustain.
+
+## Mexico
+
+![](Global_South_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+Interesting observations:
+
+  - Human rights are a big deal in 200s onward period recently.
+    Especially in 2015, they are at the forefront of topics discussed.
+  - Drug crime and climate change are themes in 2000s
+  - Nuclear weapons and international security appear to be concerns for
+    Mexico? The terms appear frequently in multiple different decades
+    which indicates a continuing interest in this topic. It obviously
+    makes sense given that nuclear technology is always a concern for
+    nations, but it seems interesting for a country that has renounced
+    the ability to make weapons (Treaty of Tlatelolco, 1968).
+
+## Egypt
+
+![](Global_South_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+Interesting observations:
+
+  - Egypt talks about Palestine a lot, especially in the early periods
+    of this analysis. That is not surprising AT ALL.
+
+  - 
 # Sentiment Analysis
 
 This is for a later time and wasn’t the focus of this project update.

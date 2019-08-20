@@ -9,6 +9,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
+---
 # Introduction
 
 I am working for Professor Mark Bradley in the History Department at the University of Chicago this summer on his research project, Mapping the Politics of the New Global South. 
@@ -18,8 +19,9 @@ I am working for Professor Mark Bradley in the History Department at the Univers
 Prior to performing analysis on the data collected, it is necessary to prep the work environment so it contains all the packages necessary for exploration. 
 
 ## Load Packages
+---
 
-```{r}
+```{r echo = FALSE}
 # Relevant to data importation, structuring and visualization
 library(tidyverse)
 library(knitr)
@@ -37,18 +39,38 @@ library(SnowballC)
 library(textclean)
 ```
 
+```{r}
+UN_stop_words <- tibble(words = c("nation", 
+                                  "unit", 
+                                  "intern", 
+                                  "countri", 
+                                  "develop", 
+                                  "peac",
+                                  "world",
+                                  "peopl",
+                                  "deleg",
+                                  # Stops countries from counting their own names as very commonly repeated words. Stripping removes casing. This takes codelist from countrycode. It might be bad because it eliminates when speeches mention other countries. 
+                                  strip(codelist$country.name.en)
+                                  ))
+```
+
+---
 ## Import datasets
 
 These datasets were produced through the corpus_maker.R script. The original source files are from Mikhaylov.
+---
 
-```{r}
+```{r echo = FALSE}
 unigrams_corpus_1970on <- read_tsv(here::here("Data", "unigrams_mikhaylov_project.tsv")) %>%
-  select(Session, Year, Country, word, word_stem)
+  select(Session, Year, Country, word, word_stem) %>%
+  drop_na() %>%
+  mutate(word_stem = if_else(word == "african", "africa", word_stem))
 
 bigrams_corpus_1970on <- read_tsv(here::here("Data", "bigrams_mikhaylov_project.tsv")) %>%
   select(Session, Year, Country, first_word_stem, second_word_stem, word_stem)
 ```
 
+---
 ## Glimpse at the content of the datasets
 
 Unigrams
@@ -62,25 +84,11 @@ Bigrams
 ```{r}
 kable(bigrams_corpus_1970on %>% filter(Session == 25) %>% slice(1:10))
 ```
+---
 
 # Common Words by Decade
 
-```{r}
-UN_stop_words <- tibble(words = c("nation", 
-                                  "unit", 
-                                  "intern", 
-                                  "countri", 
-                                  "develop", 
-                                  "peac",
-                                  "world",
-                                  "peopl",
-                                  # Stops countries from counting their own names as very commonly repeated words. 
-                                  # Stripping removes casing. This takes codelist from countrycode.
-                                  strip(codelist$country.name.en)
-                                  ))
-```
-
-```{r}
+```{r echo = FALSE}
 seventies_freq <- unigrams_corpus_1970on %>%
   filter(Year == 1970) %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
@@ -127,19 +135,21 @@ ggplot(data = tens_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n)
   labs(title = "Most common words in 2010", x = "Words (Stemmed)", y = "Number of Mentions")
 ```
 
-# Looking at specific countries keywords changing over time
+# Looking at specific countries common words over time
 
 I was encouraged by Professor Bradley to investigate keyword trends over time in the following countries:
 
-*Indonesia
-*Algeria
-*Kenya
-*Mexico
-*Egypt
+* Indonesia
+* Algeria
+* Kenya
+* Mexico
+* Egypt
 
-Here is what emerged based on this analysis.
+What I've done is to group the speeches of each country into 5 year increments and then took the top 10 words identified in each chunk. This allows us to see what keywords rise and fall over time. Here is what emerged based on this analysis.
 
-```{r fig.height = 10, fig.width = 10}
+## Indonesia
+
+```{r fig.height = 10, fig.width = 10, echo = FALSE}
 indonesia_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Indonesia") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
@@ -147,74 +157,176 @@ indonesia_count_word_year <- unigrams_corpus_1970on %>%
   group_by(Year) %>%
   count(word_stem) %>%
   group_by(Year) %>%
-  top_n(n = 5) %>%
+  top_n(n = 10) %>%
+  mutate(percent = n/sum(n)) %>%
   arrange(desc(n), .by_group = TRUE) %>%
   ungroup() %>%
   mutate(Year = as.factor(Year),
            name = reorder_within(word_stem, n, Year))
 
-ggplot(data = indonesia_count_word_year, mapping = aes(x = name, y = n, fill = Year)) +
+ggplot(data = indonesia_count_word_year, mapping = aes(x = name, y = percent, fill = Year)) +
     geom_col(show.legend = FALSE) +
     facet_wrap(~Year, scales = "free_y") +
     coord_flip() +
     scale_x_reordered() +
     scale_y_continuous(expand = c(0,0)) +
-    labs(y = "Count",
+    labs(y = "Count (Percent of All Relevant Words Said During Period)",
          x = NULL,
          title = "Most Common Words Over Time (Indonesia)")
+
+# How to graph one or multiple specific word's occurances over time.
+# overtime <- unigrams_corpus_1970on %>%
+#   filter(Country == "Indonesia") %>%
+#   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+#   filter(word_stem == "econom" | word_stem == "global") %>%
+#   group_by(Year, word_stem) %>%
+#   count()
+# 
+# ggplot(data = overtime, mapping = aes(x = Year, y = n, color = word_stem)) +
+#   geom_path()
 ```
 
-```{r}
-indonesia <- unigrams_corpus_1970on %>%
-  filter(Country == "Indonesia") %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+Interesting observations:
 
-algeria <- unigrams_corpus_1970on %>%
+* The word "Partnership" arises in the range of 2006-2010. This is interesting because it's right at the start of the rise of the usage of the term "Global South" per my understanding, which is importent as it indicates a shift towards a cooperative outlook towards foreign policy potentially.
+* ASEAN becoming a continually present term starting in 2000.
+* Words like "commit," "goal," etc. appear more in the later years. Generally, the tone is more outward looking and cooperative. 
+
+## Algeria
+
+```{r fig.height = 10, fig.width = 10, echo = FALSE}
+algeria_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Algeria") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
+  mutate(Year = cut_interval(Year, length = 5)) %>%
+  group_by(Year) %>%
+  count(word_stem) %>%
+  group_by(Year) %>%
+  top_n(n = 10) %>%
   mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Year = as.factor(Year),
+           name = reorder_within(word_stem, n, Year))
 
-kenya <- unigrams_corpus_1970on %>%
+ggplot(data = algeria_count_word_year, mapping = aes(x = name, y = percent, fill = Year)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~Year, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(y = "Count (Percent of All Relevant Words Said During Period)",
+         x = NULL,
+         title = "Most Common Words Over Time (Algeria)")
+```
+
+Interesting observations:
+
+* Terrorism is a key phrase mentioned a lot during the later period of the civil war. 
+* Crisis is said a lot in 1980s. Not exactly sure why that's the case. I don't know much about Algeria but my quick internet investigation couldn't reveal anything obvious. 
+* Any changes from 1970 to 2018 not as apparent as other countries. It's not the most revealing country to see changes in the discourse surrounding development. 
+
+## Kenya
+
+```{r fig.height = 10, fig.width = 10, echo = FALSE}
+kenya_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Kenya") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
+  mutate(Year = cut_interval(Year, length = 5)) %>%
+  group_by(Year) %>%
+  count(word_stem) %>%
+  group_by(Year) %>%
+  top_n(n = 10) %>%
   mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Year = as.factor(Year),
+           name = reorder_within(word_stem, n, Year))
 
-mexico <- unigrams_corpus_1970on %>%
+ggplot(data = kenya_count_word_year, mapping = aes(x = name, y = percent, fill = Year)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~Year, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(y = "Count (Percent of All Relevant Words Said During Period)",
+         x = NULL,
+         title = "Most Common Words Over Time (Kenya)")
+```
+
+Interesting observations:
+
+* Cooperate and global appear as keywords in 1990-1995. 
+* Language of cooperation definately has changed in the early period compared to the late period. 
+* Relations with Somalia seem to be very important in the late 2000s. They seem to have started campaigns against Al-Shabab around that time.
+* This trend appears to continue through the rest of the 2000s with mentions of Sudan, Somalia again, Support, and Sustain.
+
+## Mexico
+
+```{r fig.height = 10, fig.width = 10, echo = FALSE}
+mexico_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Mexico") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
+  mutate(Year = cut_interval(Year, length = 5)) %>%
+  group_by(Year) %>%
+  count(word_stem) %>%
+  group_by(Year) %>%
+  top_n(n = 10) %>%
   mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Year = as.factor(Year),
+           name = reorder_within(word_stem, n, Year))
 
-egypt<- unigrams_corpus_1970on %>%
+ggplot(data = mexico_count_word_year, mapping = aes(x = name, y = percent, fill = Year)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~Year, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(y = "Count (Percent of All Relevant Words Said During Period)",
+         x = NULL,
+         title = "Most Common Words Over Time (Mexico)")
+```
+
+Interesting observations:
+
+* Human rights are a big deal in 200s onward period recently. Especially in 2015, they are at the forefront of topics discussed. 
+* Drug crime and climate change are themes in 2000s
+* Nuclear weapons and international security appear to be concerns for Mexico? The terms appear frequently in multiple different decades which indicates a continuing interest in this topic. It obviously makes sense given that nuclear technology is always a concern for nations, but it seems interesting for a country that has renounced the ability to make weapons (Treaty of Tlatelolco, 1968).
+
+## Egypt
+
+```{r fig.height = 10, fig.width = 10, echo = FALSE}
+egypt_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Egypt") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
+  mutate(Year = cut_interval(Year, length = 5)) %>%
+  group_by(Year) %>%
+  count(word_stem) %>%
+  group_by(Year) %>%
+  top_n(n = 10) %>%
   mutate(percent = n/sum(n)) %>%
-  slice(1:30)
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Year = as.factor(Year),
+           name = reorder_within(word_stem, n, Year))
+
+ggplot(data = egypt_count_word_year, mapping = aes(x = name, y = percent, fill = Year)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~Year, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(y = "Count (Percent of All Relevant Words Said During Period)",
+         x = NULL,
+         title = "Most Common Words Over Time (Egypt)")
 ```
+
+Interesting observations:
+
+* Egypt talks about Palestine a lot, especially in the early periods of this analysis. That is not surprising AT ALL.
+* 
 
 # Sentiment Analysis
 
