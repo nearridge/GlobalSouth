@@ -202,6 +202,45 @@ ggplot(data = words_divided, mapping = aes(x = name, y = n, label = n)) +
 
 ![](Global_South_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
+# Looking at specific words overtime globally
+
+``` r
+overtime <- unigrams_corpus_1970on %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  filter(word_stem == "environ" | word_stem == "climat" | word_stem == "resili" | word_stem == "sustain" | word_stem == "capabl") %>%
+  # hybriditiy never mentioned
+  group_by(Year, word_stem) %>%
+  count()
+
+others_overtime <- overtime %>%
+  filter(word_stem == "resili"  | word_stem == "capabl")
+
+cc_overtime <- overtime %>%
+  filter(word_stem == "climat" | word_stem == "environ")
+
+ggplot(data = overtime, mapping = aes(x = Year, y = n, color = word_stem)) +
+  geom_path() +
+  labs(title = "Count of focus words over time", y = "Number of Mentions", color = "Word Stem")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
+``` r
+ggplot(data = others_overtime, mapping = aes(x = Year, y = n, color = word_stem)) +
+  geom_path() +
+  labs(title = "Mentions of words related to capacity over time", y = "Number of Mentions", color = "Word Stem")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->
+
+``` r
+ggplot(data = cc_overtime, mapping = aes(x = Year, y = n, color = word_stem)) +
+  geom_path() +
+  labs(title = "Mentions of words related to climate over time", y = "Number of Mentions", color = "Word Stem")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->
+
 # Sentiment Analysis
 
 This is for a later time and wasn’t the focus of this project update.
