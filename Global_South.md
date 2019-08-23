@@ -3,6 +3,15 @@ Mapping the Politics of the New Global South, Progress Update
 Neeraj Sharma
 7/31/2019
 
+# Stop Words
+
+This is a list of stemmed words that appear so much in the dataset that
+they are essentially noise. This is a list object that is called later
+on to remove these so-called “stop words.” I have listed them out here
+so the reader is aware what UN-specific words have been cleaned out of
+the data. I reference data about country references in my notes, but
+they will not appear in these graphs.
+
 ``` r
 UN_stop_words <- tibble(words = c("nation", 
                                   "unit", 
@@ -17,10 +26,6 @@ UN_stop_words <- tibble(words = c("nation",
                                   strip(codelist$country.name.en)
                                   ))
 ```
-
-# Common Words by Decade
-
-![](Global_South_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->![](Global_South_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->![](Global_South_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
 
 # Looking at specific countries common words over time
 
@@ -40,7 +45,7 @@ emerged based on this analysis.
 
 ## Indonesia
 
-![](Global_South_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](Global_South_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 Interesting observations:
 
@@ -55,7 +60,7 @@ Interesting observations:
 
 ## Algeria
 
-![](Global_South_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](Global_South_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 Interesting observations:
 
@@ -70,7 +75,7 @@ Interesting observations:
 
 ## Kenya
 
-![](Global_South_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](Global_South_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 Interesting observations:
 
@@ -85,7 +90,7 @@ Interesting observations:
 
 ## Mexico
 
-![](Global_South_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](Global_South_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 Interesting observations:
 
@@ -101,14 +106,102 @@ Interesting observations:
 
 ## Egypt
 
-![](Global_South_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](Global_South_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 Interesting observations:
 
   - Egypt talks about Palestine a lot, especially in the early periods
     of this analysis. That is not surprising AT ALL.
+  - While some countries focus on economy in their speeches, Egypt has
+    not made it a focus of their speeches. Rather, their concern seems
+    much more rooted in the geopolitics of North Africa. They mention
+    the Arab World, Palestine, and Africa and words related to policy in
+    these areas much more than words like global or economy.
 
-  - 
+# Common Words by Decade
+
+``` r
+words_decades <- unigrams_corpus_1970on %>%
+  mutate(decade = paste0(substr(Year, 1, 3), "0s", sep = "")) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(decade) %>%
+  count(word_stem) %>%
+  group_by(decade) %>%
+  top_n(n = 10) %>%
+  mutate(percent = n/sum(n)) %>%
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(decade = as.factor(decade),
+           name = reorder_within(word_stem, n, decade))
+```
+
+``` r
+ggplot(data = words_decades, mapping = aes(x = name, y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.1, size = 3, fontface = "bold", color = "White") +
+  coord_flip() +
+  scale_x_reordered() +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_wrap(~ decade, scales = "free_y") +
+  labs(title = "Most common words over time (all nations)", x = "Words (Stemmed)", y = "Number of Mentions")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+Old example I have written that works well to provide an alternative way
+of graphing words over time. This is being kept here just for example’s
+sake and isn’t doesn’t have good underlying data.
+
+``` r
+seventies_freq <- unigrams_corpus_1970on %>%
+  filter(Year == 1970 ) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n))
+
+
+ggplot(data = seventies_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
+  coord_flip() +
+  labs(title = "Most common words in 1970", x = "Words (Stemmed)", y = "Number of Mentions")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+# Common words using 1989 as the dividing point
+
+``` r
+words_divided <- unigrams_corpus_1970on %>%
+  mutate(Era = if_else(Year <= 1989, "1 Before or Equal to 1989", "2 After 1989")) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(Era) %>%
+  count(word_stem) %>%
+  group_by(Era) %>%
+  top_n(n = 10) %>%
+  mutate(percent = n/sum(n)) %>%
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Era = as.factor(Era),
+           name = reorder_within(word_stem, n, Era))
+```
+
+``` r
+ggplot(data = words_divided, mapping = aes(x = name, y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.1, size = 3, fontface = "bold", color = "White") +
+  coord_flip() +
+  scale_x_reordered() +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_wrap(~ Era, scales = "free_y") +
+  labs(title = "Most common words over time (Split by Era)", x = "Words (Stemmed)", y = "Number of Mentions")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+
 # Sentiment Analysis
 
 This is for a later time and wasn’t the focus of this project update.

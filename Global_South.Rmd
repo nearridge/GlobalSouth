@@ -9,18 +9,6 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
----
-# Introduction
-
-I am working for Professor Mark Bradley in the History Department at the University of Chicago this summer on his research project, Mapping the Politics of the New Global South. 
-
-# Setup
-
-Prior to performing analysis on the data collected, it is necessary to prep the work environment so it contains all the packages necessary for exploration. 
-
-## Load Packages
----
-
 ```{r echo = FALSE}
 # Relevant to data importation, structuring and visualization
 library(tidyverse)
@@ -39,27 +27,6 @@ library(SnowballC)
 library(textclean)
 ```
 
-```{r}
-UN_stop_words <- tibble(words = c("nation", 
-                                  "unit", 
-                                  "intern", 
-                                  "countri", 
-                                  "develop", 
-                                  "peac",
-                                  "world",
-                                  "peopl",
-                                  "deleg",
-                                  # Stops countries from counting their own names as very commonly repeated words. Stripping removes casing. This takes codelist from countrycode. It might be bad because it eliminates when speeches mention other countries. 
-                                  strip(codelist$country.name.en)
-                                  ))
-```
-
----
-## Import datasets
-
-These datasets were produced through the corpus_maker.R script. The original source files are from Mikhaylov.
----
-
 ```{r echo = FALSE}
 unigrams_corpus_1970on <- read_tsv(here::here("Data", "unigrams_mikhaylov_project.tsv")) %>%
   select(Session, Year, Country, word, word_stem) %>%
@@ -71,6 +38,17 @@ bigrams_corpus_1970on <- read_tsv(here::here("Data", "bigrams_mikhaylov_project.
 ```
 
 ---
+# Introduction
+
+I am working for Professor Mark Bradley in the History Department at the University of Chicago this summer on his research project, Mapping the Politics of the New Global South. 
+
+
+
+## Import datasets
+
+These datasets were produced through the corpus_maker.R script. The original source files are from Mikhaylov.
+
+
 ## Glimpse at the content of the datasets
 
 Unigrams
@@ -86,53 +64,23 @@ kable(bigrams_corpus_1970on %>% filter(Session == 25) %>% slice(1:10))
 ```
 ---
 
-# Common Words by Decade
+# Stop Words
 
-```{r echo = FALSE}
-seventies_freq <- unigrams_corpus_1970on %>%
-  filter(Year == 1970) %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n))
+This is a list of stemmed words that appear so much in the dataset that they are essentially noise. This is a list object that is called later on to remove these so-called "stop words." I have listed them out here so the reader is aware what UN-specific words have been cleaned out of the data. I reference data about country references in my notes, but they will not appear in these graphs. 
 
-ninties_freq <- unigrams_corpus_1970on %>%
-  filter(Year == 1990) %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n))
-
-tens_freq <- unigrams_corpus_1970on %>%
-  filter(Year == 2010) %>%
-  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
-  group_by(word_stem) %>%
-  count(sort = TRUE) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(percent = n/sum(n))
-
-ggplot(data = seventies_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
-  geom_col() +
-  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
-  coord_flip() +
-  labs(title = "Most common words in 1970", x = "Words (Stemmed)", y = "Number of Mentions")
-
-ggplot(data = ninties_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
-  geom_col() +
-  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
-  coord_flip() +
-  labs(title = "Most common words in 1990", x = "Words (Stemmed)", y = "Number of Mentions")
-
-ggplot(data = tens_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
-  geom_col() +
-  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
-  coord_flip() +
-  labs(title = "Most common words in 2010", x = "Words (Stemmed)", y = "Number of Mentions")
+```{r}
+UN_stop_words <- tibble(words = c("nation", 
+                                  "unit", 
+                                  "intern", 
+                                  "countri", 
+                                  "develop", 
+                                  "peac",
+                                  "world",
+                                  "peopl",
+                                  "deleg",
+                                  # Stops countries from counting their own names as very commonly repeated words. Stripping removes casing. This takes codelist from countrycode. It might be bad because it eliminates when speeches mention other countries. 
+                                  strip(codelist$country.name.en)
+                                  ))
 ```
 
 # Looking at specific countries common words over time
@@ -149,7 +97,7 @@ What I've done is to group the speeches of each country into 5 year increments a
 
 ## Indonesia
 
-```{r fig.height = 10, fig.width = 10, echo = FALSE}
+```{r fig.height = 8, fig.width = 10, echo = FALSE}
 indonesia_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Indonesia") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
@@ -172,7 +120,8 @@ ggplot(data = indonesia_count_word_year, mapping = aes(x = name, y = percent, fi
     scale_y_continuous(expand = c(0,0)) +
     labs(y = "Count (Percent of All Relevant Words Said During Period)",
          x = NULL,
-         title = "Most Common Words Over Time (Indonesia)")
+         title = "Most Common Words Over Time (Indonesia)") +
+    theme(title = element_text(size = 14), strip.text.x = element_text(face = "bold"), axis.text.y = element_text(size = 12))
 
 # How to graph one or multiple specific word's occurances over time.
 # overtime <- unigrams_corpus_1970on %>%
@@ -194,7 +143,7 @@ Interesting observations:
 
 ## Algeria
 
-```{r fig.height = 10, fig.width = 10, echo = FALSE}
+```{r fig.height = 8, fig.width = 10, echo = FALSE}
 algeria_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Algeria") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
@@ -217,7 +166,8 @@ ggplot(data = algeria_count_word_year, mapping = aes(x = name, y = percent, fill
     scale_y_continuous(expand = c(0,0)) +
     labs(y = "Count (Percent of All Relevant Words Said During Period)",
          x = NULL,
-         title = "Most Common Words Over Time (Algeria)")
+         title = "Most Common Words Over Time (Algeria)") +
+    theme(title = element_text(size = 14), strip.text.x = element_text(face = "bold"), axis.text.y = element_text(size = 12))
 ```
 
 Interesting observations:
@@ -228,7 +178,7 @@ Interesting observations:
 
 ## Kenya
 
-```{r fig.height = 10, fig.width = 10, echo = FALSE}
+```{r fig.height = 8, fig.width = 10, echo = FALSE}
 kenya_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Kenya") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
@@ -251,7 +201,8 @@ ggplot(data = kenya_count_word_year, mapping = aes(x = name, y = percent, fill =
     scale_y_continuous(expand = c(0,0)) +
     labs(y = "Count (Percent of All Relevant Words Said During Period)",
          x = NULL,
-         title = "Most Common Words Over Time (Kenya)")
+         title = "Most Common Words Over Time (Kenya)") +
+    theme(title = element_text(size = 14), strip.text.x = element_text(face = "bold"), axis.text.y = element_text(size = 12))
 ```
 
 Interesting observations:
@@ -263,7 +214,7 @@ Interesting observations:
 
 ## Mexico
 
-```{r fig.height = 10, fig.width = 10, echo = FALSE}
+```{r fig.height = 8, fig.width = 10, echo = FALSE}
 mexico_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Mexico") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
@@ -286,7 +237,8 @@ ggplot(data = mexico_count_word_year, mapping = aes(x = name, y = percent, fill 
     scale_y_continuous(expand = c(0,0)) +
     labs(y = "Count (Percent of All Relevant Words Said During Period)",
          x = NULL,
-         title = "Most Common Words Over Time (Mexico)")
+         title = "Most Common Words Over Time (Mexico)") +
+    theme(title = element_text(size = 14), strip.text.x = element_text(face = "bold"), axis.text.y = element_text(size = 12))
 ```
 
 Interesting observations:
@@ -297,7 +249,7 @@ Interesting observations:
 
 ## Egypt
 
-```{r fig.height = 10, fig.width = 10, echo = FALSE}
+```{r fig.height = 8, fig.width = 10, echo = FALSE}
 egypt_count_word_year <- unigrams_corpus_1970on %>%
   filter(Country == "Egypt") %>%
   anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
@@ -320,13 +272,90 @@ ggplot(data = egypt_count_word_year, mapping = aes(x = name, y = percent, fill =
     scale_y_continuous(expand = c(0,0)) +
     labs(y = "Count (Percent of All Relevant Words Said During Period)",
          x = NULL,
-         title = "Most Common Words Over Time (Egypt)")
+         title = "Most Common Words Over Time (Egypt)") +
+    theme(title = element_text(size = 14), strip.text.x = element_text(face = "bold"), axis.text.y = element_text(size = 12))
 ```
 
 Interesting observations:
 
 * Egypt talks about Palestine a lot, especially in the early periods of this analysis. That is not surprising AT ALL.
-* 
+* While some countries focus on economy in their speeches, Egypt has not made it a focus of their speeches. Rather, their concern seems much more rooted in the geopolitics of North Africa. They mention the Arab World, Palestine, and Africa and words related to policy in these areas much more than words like global or economy. 
+
+# Common Words by Decade
+
+```{r}
+words_decades <- unigrams_corpus_1970on %>%
+  mutate(decade = paste0(substr(Year, 1, 3), "0s", sep = "")) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(decade) %>%
+  count(word_stem) %>%
+  group_by(decade) %>%
+  top_n(n = 10) %>%
+  mutate(percent = n/sum(n)) %>%
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(decade = as.factor(decade),
+           name = reorder_within(word_stem, n, decade))
+```
+
+```{r}
+ggplot(data = words_decades, mapping = aes(x = name, y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.1, size = 3, fontface = "bold", color = "White") +
+  coord_flip() +
+  scale_x_reordered() +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_wrap(~ decade, scales = "free_y") +
+  labs(title = "Most common words over time (all nations)", x = "Words (Stemmed)", y = "Number of Mentions")
+```
+
+Old example I have written that works well to provide an alternative way of graphing words over time. This is being kept here just for example's sake and isn't doesn't have good underlying data.
+
+```{r}
+seventies_freq <- unigrams_corpus_1970on %>%
+  filter(Year == 1970 ) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(word_stem) %>%
+  count(sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(percent = n/sum(n))
+
+
+ggplot(data = seventies_freq %>% slice(1:10), mapping = aes(x = reorder(word_stem, n), y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.5, fontface = "bold", color = "White") +
+  coord_flip() +
+  labs(title = "Most common words in 1970", x = "Words (Stemmed)", y = "Number of Mentions")
+```
+
+# Common words using 1989 as the dividing point
+
+```{r}
+words_divided <- unigrams_corpus_1970on %>%
+  mutate(Era = if_else(Year <= 1989, "1 Before or Equal to 1989", "2 After 1989")) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  group_by(Era) %>%
+  count(word_stem) %>%
+  group_by(Era) %>%
+  top_n(n = 10) %>%
+  mutate(percent = n/sum(n)) %>%
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Era = as.factor(Era),
+           name = reorder_within(word_stem, n, Era))
+```
+
+```{r}
+ggplot(data = words_divided, mapping = aes(x = name, y = n, label = n)) +
+  geom_col() +
+  geom_text(hjust = 1.1, size = 3, fontface = "bold", color = "White") +
+  coord_flip() +
+  scale_x_reordered() +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_wrap(~ Era, scales = "free_y") +
+  labs(title = "Most common words over time (Split by Era)", x = "Words (Stemmed)", y = "Number of Mentions")
+```
 
 # Sentiment Analysis
 
