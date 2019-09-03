@@ -25,12 +25,16 @@ library(tidytext)
 library(stringr)
 library(SnowballC)
 library(textclean)
+
+# Used for webscraping
+library(rvest)
 ```
 
 ```{r echo = FALSE}
 unigrams_corpus_1970on <- read_tsv(here::here("Data", "unigrams_mikhaylov_project.tsv")) %>%
   select(Session, Year, Country, word, word_stem) %>%
   drop_na() %>%
+  # Manually add some stemming for important words and terms that didn't get all variants stemmed
   mutate(word_stem = if_else(word == "african", "africa", word_stem)) %>%
   mutate(word_stem = if_else(word == "environmental", "environ", word_stem))
   
@@ -43,7 +47,6 @@ bigrams_corpus_1970on <- read_tsv(here::here("Data", "bigrams_mikhaylov_project.
 # Introduction
 
 I am working for Professor Mark Bradley in the History Department at the University of Chicago this summer on his research project, Mapping the Politics of the New Global South. 
-
 
 
 ## Import datasets
@@ -376,6 +379,59 @@ ggplot(data = cc_overtime, mapping = aes(x = Year, y = n, color = word_stem)) +
   geom_path() +
   labs(title = "Mentions of words related to climate over time", y = "Number of Mentions", color = "Word Stem")
 
+```
+
+# Scraping table for Global North/South orientation
+
+```{r}
+northsouth <- read_html("https://meta.wikimedia.org/wiki/List_of_countries_by_regional_classification")
+nonaligned <- read_html("https://www.worlddata.info/alliances/non-aligned-movement.php")
+```
+
+```{r fig.height = 8, fig.width = 10, echo = FALSE}
+northsouth_tbl <- html_nodes(northsouth, css = "table") %>%
+  # get the first table
+  nth(1) %>%
+  # convert to data frame
+  html_table(header = TRUE) %>%
+  mutate(`Global South`, `Global South` = as.factor(`Global South`)) %>%
+  mutate(Region = countrycode(Country, origin = "country.name", destination = "region")) %>%
+  drop_na()
+
+nonaligned_tbl <- html_nodes(nonaligned, css = "table") %>%
+  # get the first table
+  nth(1) %>%
+  # convert to data frame
+  html_table(header = TRUE) %>%
+  mutate(Region = countrycode(Country, origin = "country.name", destination = "region")) %>%
+  select(Country, Region) %>%
+  drop_na()
+
+only_south <- left_join(unigrams_corpus_1970on, northsouth_tbl) %>%
+  filter(`Global South` == "Global South") %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  mutate(Year = cut_interval(Year, length = 5)) %>%
+  group_by(Year) %>%
+  count(word_stem) %>%
+  group_by(Year) %>%
+  top_n(n = 10) %>%
+  mutate(percent = n/sum(n)) %>%
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Year = as.factor(Year),
+           name = reorder_within(word_stem, n, Year))
+
+
+ggplot(data = only_south, mapping = aes(x = name, y = percent, fill = Year)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~Year, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(y = "Count (Percent of All Relevant Words Said During Period)",
+         x = NULL,
+         title = "Most Common Words Over Time (Global South States)") +
+    theme(title = element_text(size = 14), strip.text.x = element_text(face = "bold"), axis.text.y = element_text(size = 12))
 ```
 
 # Sentiment Analysis
