@@ -241,6 +241,15 @@ ggplot(data = cc_overtime, mapping = aes(x = Year, y = n, color = word_stem)) +
 
 ![](Global_South_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->
 
+# Scraping table for Global North/South orientation
+
+``` r
+northsouth <- read_html("https://meta.wikimedia.org/wiki/List_of_countries_by_regional_classification")
+nonaligned <- read_html("https://www.worlddata.info/alliances/non-aligned-movement.php")
+```
+
+![](Global_South_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->![](Global_South_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->
+
 # Sentiment Analysis
 
 This is for a later time and wasn’t the focus of this project update.

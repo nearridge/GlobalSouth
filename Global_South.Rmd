@@ -394,6 +394,8 @@ northsouth_tbl <- html_nodes(northsouth, css = "table") %>%
   nth(1) %>%
   # convert to data frame
   html_table(header = TRUE) %>%
+  # Override Singapore classification to make it part of global south
+  mutate(`Global South`, `Global South` = if_else(`Country` == "Singapore", "Global South", `Global South`)) %>%
   mutate(`Global South`, `Global South` = as.factor(`Global South`)) %>%
   mutate(Region = countrycode(Country, origin = "country.name", destination = "region")) %>%
   drop_na()
@@ -421,6 +423,19 @@ only_south <- left_join(unigrams_corpus_1970on, northsouth_tbl) %>%
   mutate(Year = as.factor(Year),
            name = reorder_within(word_stem, n, Year))
 
+only_alignment <- left_join(unigrams_corpus_1970on, nonaligned_tbl) %>%
+  anti_join(UN_stop_words, by = c("word_stem" = "words")) %>%
+  mutate(Year = cut_interval(Year, length = 5)) %>%
+  group_by(Year) %>%
+  count(word_stem) %>%
+  group_by(Year) %>%
+  top_n(n = 10) %>%
+  mutate(percent = n/sum(n)) %>%
+  arrange(desc(n), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Year = as.factor(Year),
+           name = reorder_within(word_stem, n, Year))
+
 
 ggplot(data = only_south, mapping = aes(x = name, y = percent, fill = Year)) +
     geom_col(show.legend = FALSE) +
@@ -430,7 +445,18 @@ ggplot(data = only_south, mapping = aes(x = name, y = percent, fill = Year)) +
     scale_y_continuous(expand = c(0,0)) +
     labs(y = "Count (Percent of All Relevant Words Said During Period)",
          x = NULL,
-         title = "Most Common Words Over Time (Global South States)") +
+         title = "Most Common Words Over Time (Global South States + Singapore)") +
+    theme(title = element_text(size = 14), strip.text.x = element_text(face = "bold"), axis.text.y = element_text(size = 12))
+
+ggplot(data = only_alignment, mapping = aes(x = name, y = percent, fill = Year)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~Year, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(y = "Count (Percent of All Relevant Words Said During Period)",
+         x = NULL,
+         title = "Most Common Words Over Time (Non Aligned States)") +
     theme(title = element_text(size = 14), strip.text.x = element_text(face = "bold"), axis.text.y = element_text(size = 12))
 ```
 
