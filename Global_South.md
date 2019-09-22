@@ -244,11 +244,20 @@ ggplot(data = cc_overtime, mapping = aes(x = Year, y = n, color = word_stem)) +
 # Scraping table for Global North/South orientation
 
 ``` r
+# I ended up looking at north/south vs alignment over G77 because the wikipedia pages for the prior two were organized in a much more convenient format for text scraping. 
+
 northsouth <- read_html("https://meta.wikimedia.org/wiki/List_of_countries_by_regional_classification")
 nonaligned <- read_html("https://www.worlddata.info/alliances/non-aligned-movement.php")
 ```
 
 ![](Global_South_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->![](Global_South_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->
+
+# Relationships between words using n+7 formula
+
+Currently, I have no clue how to impliment this. Professor Bradley
+indicated that this likely would be a project for the Fall quarter and
+he would elaborate further on past techniques he has seen in our meeting
+on Tuesday the 24th.
 
 # Sentiment Analysis
 
