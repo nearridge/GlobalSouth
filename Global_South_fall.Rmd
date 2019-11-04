@@ -1,0 +1,52 @@
+---
+title: "Global_South_Fall"
+author: "Neeraj Sharma"
+date: "11/3/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo = FALSE}
+# Relevant to data importation, structuring and visualization
+library(tidyverse)
+library(knitr)
+library(readr)
+library(here)
+
+# Relevant to data formatting
+library(lubridate)
+library(countrycode)
+
+# Relevant to text analysis
+library(tidytext)
+library(stringr)
+library(SnowballC)
+library(textclean)
+
+# Used for webscraping
+library(rvest)
+
+# Andres' fancy package for text analysis
+library(cleanNLP)
+reticulate::use_python("/anaconda3/bin/python.app")
+cnlp_init_spacy()
+```
+
+```{r cache=TRUE}
+imported_files <- read_tsv(here::here("Data", "raw_speeches_mikhaylov_project.tsv"))
+
+annotated_imported_files <- cnlp_annotate(imported_files, as_strings = TRUE)
+cnlp_get_token(annotated_imported_files) %>%
+  filter(!str_detect(word, "^[0-9]*$")) %>%
+  filter(!upos == "PUNCT")
+```
+
+The words we are most interested at the moment are:
+Govern-
+Develop-
+Secur-
+
+and any relevant derivatives of them. These are words that we'll tag the entire sentence of when they appear in a speech. 
