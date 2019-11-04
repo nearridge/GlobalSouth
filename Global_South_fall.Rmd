@@ -52,7 +52,6 @@ data(stop_words)
 ```
 
 
-
 So I've been having some trouble applying this approach to get every single word tagged for all 8093 speeches. Thus, at first, I've started with the speeches in the 1970s only. That's just under 5 million individual words. I'd be at ~37 million when I annotate the entire dataframe as it currently stands. That'll take a long time to process so I'll do that later. 
 
 The words we are most interested at the moment are:
@@ -74,14 +73,13 @@ distance_between_words <- function(df_of_all_tokens, keyword) {
     filter(lemma == keyword) %>%
     select(id, sid) %>%
     mutate(sentence_number = row_number()) %>%
-    inner_join(all_words_only_1970, by = NULL) %>%
+    inner_join(df_of_all_tokens, by = NULL) %>%
     select(id, sid, word, lemma, sentence_number)
   
   x <- max(select(df, sentence_number))
   
   datalist = list()
   for (i in 1:x) {
-      # ... make some data
       limited_df <- filter(df, sentence_number == i)
       location_of_keyword <- limited_df %>%
           mutate(keyword_row_number = if_else(lemma == keyword, location <- as.double(row_number()), 0)) %>%
@@ -94,7 +92,7 @@ distance_between_words <- function(df_of_all_tokens, keyword) {
         mutate(distance_from_keyword = abs(keyword_row_number - transient_row_number)) %>%
         mutate(distance_from_keyword_percent = distance_from_keyword/length_of_sentence)
       
-      datalist[[i]] <- final # add it to your list
+      datalist[[i]] <- final
 }
   export <- bind_rows(datalist)
 
@@ -120,6 +118,7 @@ ggplot(distance_between_govern_other_words, mapping = aes(`count`, `mean(distanc
 
 # for some reason, the sentence division within the annotated_imported_files object is empty so cnlp_get_sentences returns an empty dataframe. What do I need to configure differently to get a) sentences to be parsed by the cnlp_annotate function up here and b) extract actual sentences and any information at that level.
 
+kable(distance_between_govern_other_words %>% slice(1:15))
 
 ```
 
@@ -142,6 +141,8 @@ ggplot(distance_between_develop_other_words, mapping = aes(`count`, `mean(distan
 
 ggplot(distance_between_develop_other_words %>% filter(lemma != "country"), mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point()
+
+kable(distance_between_develop_other_words %>% slice(1:15))
 ```
 
 Secure
@@ -158,4 +159,6 @@ distance_between_secure_other_words <- distance_between_words(all_words_only_197
 
 ggplot(distance_between_secure_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point()
+
+kable(distance_between_secure_other_words %>% slice(1:15))
 ```

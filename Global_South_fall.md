@@ -43,14 +43,13 @@ distance_between_words <- function(df_of_all_tokens, keyword) {
     filter(lemma == keyword) %>%
     select(id, sid) %>%
     mutate(sentence_number = row_number()) %>%
-    inner_join(all_words_only_1970, by = NULL) %>%
+    inner_join(df_of_all_tokens, by = NULL) %>%
     select(id, sid, word, lemma, sentence_number)
   
   x <- max(select(df, sentence_number))
   
   datalist = list()
   for (i in 1:x) {
-      # ... make some data
       limited_df <- filter(df, sentence_number == i)
       location_of_keyword <- limited_df %>%
           mutate(keyword_row_number = if_else(lemma == keyword, location <- as.double(row_number()), 0)) %>%
@@ -63,7 +62,7 @@ distance_between_words <- function(df_of_all_tokens, keyword) {
         mutate(distance_from_keyword = abs(keyword_row_number - transient_row_number)) %>%
         mutate(distance_from_keyword_percent = distance_from_keyword/length_of_sentence)
       
-      datalist[[i]] <- final # add it to your list
+      datalist[[i]] <- final
 }
   export <- bind_rows(datalist)
 
@@ -93,7 +92,27 @@ ggplot(distance_between_govern_other_words, mapping = aes(`count`, `mean(distanc
   # related words: scatter plot with count of total times said on x axis and distance from govern on y axis
 
 # for some reason, the sentence division within the annotated_imported_files object is empty so cnlp_get_sentences returns an empty dataframe. What do I need to configure differently to get a) sentences to be parsed by the cnlp_annotate function up here and b) extract actual sentences and any information at that level.
+
+kable(distance_between_govern_other_words %>% slice(1:15))
 ```
+
+| lemma         | count | mean(distance\_from\_keyword\_percent) |
+| :------------ | ----: | -------------------------------------: |
+| international |   231 |                              0.2325197 |
+| principle     |   186 |                              0.1695758 |
+| country       |   145 |                              0.3723520 |
+| States        |   135 |                              0.3162734 |
+| relation      |   131 |                              0.1314717 |
+| the           |   125 |                              0.5193626 |
+| world         |   111 |                              0.2771837 |
+| economic      |   101 |                              0.2724072 |
+| sea           |    95 |                              0.3076154 |
+| United        |    95 |                              0.3905248 |
+| Nations       |    86 |                              0.3991869 |
+| law           |    81 |                              0.2271104 |
+| people        |    75 |                              0.3100423 |
+| rule          |    68 |                              0.1493988 |
+| resolution    |    63 |                              0.3198142 |
 
 Develop
 
@@ -122,6 +141,28 @@ ggplot(distance_between_develop_other_words %>% filter(lemma != "country"), mapp
 
 ![](Global_South_fall_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
 
+``` r
+kable(distance_between_develop_other_words %>% slice(1:15))
+```
+
+| lemma         | count | mean(distance\_from\_keyword\_percent) |
+| :------------ | ----: | -------------------------------------: |
+| country       | 21269 |                              0.3007741 |
+| economic      |  5286 |                              0.3659214 |
+| world         |  3968 |                              0.3691014 |
+| international |  3833 |                              0.3705763 |
+| the           |  3371 |                              0.3705106 |
+| development   |  2831 |                              0.3917045 |
+| resource      |  1905 |                              0.3591063 |
+| operation     |  1857 |                              0.3414909 |
+| trade         |  1716 |                              0.3346844 |
+| nation        |  1612 |                              0.3035002 |
+| United        |  1482 |                              0.3694105 |
+| Nations       |  1324 |                              0.3746675 |
+| economy       |  1307 |                              0.3670404 |
+| system        |  1205 |                              0.3800764 |
+| increase      |  1184 |                              0.3419124 |
+
 Secure
 
 ``` r
@@ -139,3 +180,25 @@ ggplot(distance_between_secure_other_words, mapping = aes(`count`, `mean(distanc
 ```
 
 ![](Global_South_fall_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+``` r
+kable(distance_between_secure_other_words %>% slice(1:15))
+```
+
+| lemma         | count | mean(distance\_from\_keyword\_percent) |
+| :------------ | ----: | -------------------------------------: |
+| peace         |   330 |                              0.2315756 |
+| people        |   237 |                              0.3208804 |
+| recognize     |   184 |                              0.1378068 |
+| the           |   181 |                              0.5232085 |
+| world         |   181 |                              0.3194397 |
+| country       |   176 |                              0.3426234 |
+| boundary      |   168 |                              0.1408330 |
+| Israel        |   166 |                              0.2935758 |
+| international |   157 |                              0.3186979 |
+| States        |   147 |                              0.2920570 |
+| right         |   138 |                              0.2577981 |
+| United        |   137 |                              0.3677167 |
+| Nations       |   120 |                              0.3654021 |
+| resolution    |   112 |                              0.4208312 |
+| territory     |   106 |                              0.3730000 |
