@@ -1,42 +1,9 @@
----
-title: "Global_South_Fall"
-author: "Neeraj Sharma"
-date: "11/3/2019"
-output: github_document
----
+Global\_South\_Fall
+================
+Neeraj Sharma
+11/3/2019
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-```
-
-```{r echo = FALSE}
-# Relevant to data importation, structuring and visualization
-library(tidyverse)
-library(knitr)
-library(readr)
-library(here)
-
-# Relevant to data formatting
-library(lubridate)
-library(countrycode)
-
-# Relevant to text analysis
-library(tidytext)
-library(stringr)
-library(SnowballC)
-library(textclean)
-
-# Used for webscraping
-library(rvest)
-
-# Andres' fancy package for text analysis
-library(cleanNLP)
-reticulate::use_python("/anaconda3/bin/python.app")
-# I'm running the spacy implimentation of the NLP backend. I'm not sure exactly what this means. 
-cnlp_init_spacy()
-```
-
-```{r cache=TRUE}
+``` r
 # Load in the df of all the speeches by speech
 imported_files <- read_tsv(here::here("Data", "raw_speeches_mikhaylov_project.tsv"))
 
@@ -51,23 +18,25 @@ all_words_only_1970 <- cnlp_get_token(annotated_imported_files) %>%
 data(stop_words)
 ```
 
+So I’ve been having some trouble applying this approach to get every
+single word tagged for all 8093 speeches. Thus, at first, I’ve started
+with the speeches in the 1970s only. That’s just under 5 million
+individual words. I’d be at ~37 million when I annotate the entire
+dataframe as it currently stands. That’ll take a long time to process so
+I’ll do that later.
 
+The words we are most interested at the moment are: \* Govern- \*
+Develop- \* Secur-
 
-So I've been having some trouble applying this approach to get every single word tagged for all 8093 speeches. Thus, at first, I've started with the speeches in the 1970s only. That's just under 5 million individual words. I'd be at ~37 million when I annotate the entire dataframe as it currently stands. That'll take a long time to process so I'll do that later. 
-
-The words we are most interested at the moment are:
-* Govern-
-* Develop-
-* Secur-
-
-and any relevant derivatives of them. These are words that we'll tag the entire sentence of when they appear in a speech. 
+and any relevant derivatives of them. These are words that we’ll tag the
+entire sentence of when they appear in a speech.
 
 Sentences where govern is discussed.
 
+This is a function that finds out the distance between two words in a
+string. It is my baby.
 
-This is a function that finds out the distance between two words in a string. It is my baby. 
-
-```{r}
+``` r
 # Builds a function that counts how far apart two words are
 distance_between_words <- function(df_of_all_tokens, keyword) {
   df <- df_of_all_tokens %>% 
@@ -104,7 +73,7 @@ distance_between_words <- function(df_of_all_tokens, keyword) {
 
 Govern
 
-```{r}
+``` r
 distance_between_govern_other_words <- distance_between_words(all_words_only_1970, "govern") %>%
   select(id, sid, word, lemma, length_of_sentence, distance_from_keyword, distance_from_keyword_percent) %>%
   anti_join(stop_words) %>%
@@ -116,17 +85,19 @@ distance_between_govern_other_words <- distance_between_words(all_words_only_197
 
 ggplot(distance_between_govern_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point()
+```
+
+![](Global_South_fall_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+``` r
   # related words: scatter plot with count of total times said on x axis and distance from govern on y axis
 
 # for some reason, the sentence division within the annotated_imported_files object is empty so cnlp_get_sentences returns an empty dataframe. What do I need to configure differently to get a) sentences to be parsed by the cnlp_annotate function up here and b) extract actual sentences and any information at that level.
-
-
 ```
-
 
 Develop
 
-```{r}
+``` r
 distance_between_develop_other_words <- distance_between_words(all_words_only_1970, "develop") %>%
   select(id, sid, word, lemma, length_of_sentence, distance_from_keyword, distance_from_keyword_percent) %>%
   anti_join(stop_words) %>%
@@ -138,15 +109,22 @@ distance_between_develop_other_words <- distance_between_words(all_words_only_19
 
 ggplot(distance_between_develop_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point()
+```
+
+![](Global_South_fall_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+``` r
 # that thing sitting all alone at 21 k is "country" unsurprisingly
 
 ggplot(distance_between_develop_other_words %>% filter(lemma != "country"), mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point()
 ```
 
+![](Global_South_fall_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+
 Secure
 
-```{r}
+``` r
 distance_between_secure_other_words <- distance_between_words(all_words_only_1970, "secure") %>%
   select(id, sid, word, lemma, length_of_sentence, distance_from_keyword, distance_from_keyword_percent) %>%
   anti_join(stop_words) %>%
@@ -159,3 +137,5 @@ distance_between_secure_other_words <- distance_between_words(all_words_only_197
 ggplot(distance_between_secure_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point()
 ```
+
+![](Global_South_fall_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
