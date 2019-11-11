@@ -36,6 +36,10 @@ reticulate::use_python("/anaconda3/bin/python.app")
 cnlp_init_spacy()
 ```
 
+# Setup
+
+Step 1 is to import the corpus and annotate the entire dataframe. Then I extract each the tokens dataframe and initialize the stopwords dictionary. Annotating the entire corpus is a deathwish at this point because it'll be super slow. I've chosen to reduce my corpus to being just from 1970 to 1979, at least at this early stage of the project. That gives me roughly 5 million words. 
+
 ```{r cache=TRUE}
 # Load in the df of all the speeches by speech
 imported_files <- read_tsv(here::here("Data", "raw_speeches_mikhaylov_project.tsv"))
@@ -52,19 +56,17 @@ data(stop_words)
 ```
 
 
-So I've been having some trouble applying this approach to get every single word tagged for all 8093 speeches. Thus, at first, I've started with the speeches in the 1970s only. That's just under 5 million individual words. I'd be at ~37 million when I annotate the entire dataframe as it currently stands. That'll take a long time to process so I'll do that later. 
-
 The words we are most interested at the moment are:
+
 * Govern-
 * Develop-
 * Secur-
 
 and any relevant derivatives of them. These are words that we'll tag the entire sentence of when they appear in a speech. 
 
-Sentences where govern is discussed.
+# Function to determine the distance between words
 
-
-This is a function that finds out the distance between two words in a string. It is my baby. 
+This is a function that finds out the distance between two words in a string. It is my baby. It's important because my (read: Neeraj's possibly misinformed) hypothesis is that words relevant to a keyword will be said closer in a sentence to the keyword itself. At minimum, important words will be mentioned a lot. 
 
 ```{r}
 # Builds a function that counts how far apart two words are
@@ -76,11 +78,15 @@ distance_between_words <- function(df_of_all_tokens, keyword) {
     inner_join(df_of_all_tokens, by = NULL) %>%
     select(id, sid, word, lemma, sentence_number)
   
+  # number of sentences that say the keyword
   x <- max(select(df, sentence_number))
   
   datalist = list()
   for (i in 1:x) {
+      # isolates gets the ith sentence that mentions the keyword
       limited_df <- filter(df, sentence_number == i)
+      
+      # Finds the location of the keyword in the sentence
       location_of_keyword <- limited_df %>%
           mutate(keyword_row_number = if_else(lemma == keyword, location <- as.double(row_number()), 0)) %>%
           filter(lemma == keyword) %>%
@@ -92,6 +98,7 @@ distance_between_words <- function(df_of_all_tokens, keyword) {
         mutate(distance_from_keyword = abs(keyword_row_number - transient_row_number)) %>%
         mutate(distance_from_keyword_percent = distance_from_keyword/length_of_sentence)
       
+      #appends all the ith sentences together into a large df
       datalist[[i]] <- final
 }
   export <- bind_rows(datalist)
@@ -100,7 +107,7 @@ distance_between_words <- function(df_of_all_tokens, keyword) {
 }
 ```
 
-Govern
+# Mentions of Govern with related words form the 1970 to 1979 corpus
 
 ```{r}
 distance_between_govern_other_words <- distance_between_words(all_words_only_1970, "govern") %>%
@@ -113,7 +120,8 @@ distance_between_govern_other_words <- distance_between_words(all_words_only_197
   filter(lemma != "govern")
 
 ggplot(distance_between_govern_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
-  geom_point()
+  geom_point() +
+  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Govern) versus mentions")
   # related words: scatter plot with count of total times said on x axis and distance from govern on y axis
 
 # for some reason, the sentence division within the annotated_imported_files object is empty so cnlp_get_sentences returns an empty dataframe. What do I need to configure differently to get a) sentences to be parsed by the cnlp_annotate function up here and b) extract actual sentences and any information at that level.
@@ -123,29 +131,7 @@ kable(distance_between_govern_other_words %>% slice(1:15))
 ```
 
 
-Develop
-
-```{r}
-distance_between_develop_other_words <- distance_between_words(all_words_only_1970, "develop") %>%
-  select(id, sid, word, lemma, length_of_sentence, distance_from_keyword, distance_from_keyword_percent) %>%
-  anti_join(stop_words) %>%
-  group_by(lemma) %>%
-  summarise(count = n(), mean(distance_from_keyword_percent)) %>%
-  slice(215:n()) %>%
-  arrange(-count) %>%
-  filter(lemma != "develop")
-
-ggplot(distance_between_develop_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
-  geom_point()
-# that thing sitting all alone at 21 k is "country" unsurprisingly
-
-ggplot(distance_between_develop_other_words %>% filter(lemma != "country"), mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
-  geom_point()
-
-kable(distance_between_develop_other_words %>% slice(1:15))
-```
-
-Secure
+# Mentions of Secure with related words form the 1970 to 1979 corpus
 
 ```{r}
 distance_between_secure_other_words <- distance_between_words(all_words_only_1970, "secure") %>%
@@ -158,7 +144,47 @@ distance_between_secure_other_words <- distance_between_words(all_words_only_197
   filter(lemma != "secure")
 
 ggplot(distance_between_secure_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
-  geom_point()
+  geom_point() +
+  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Secure) versus mentions")
 
 kable(distance_between_secure_other_words %>% slice(1:15))
 ```
+
+# Mentions of Develop with related words form the 1970 to 1979 corpus
+
+```{r}
+distance_between_develop_other_words <- distance_between_words(all_words_only_1970, "develop") %>%
+  select(id, sid, word, lemma, length_of_sentence, distance_from_keyword, distance_from_keyword_percent) %>%
+  anti_join(stop_words) %>%
+  group_by(lemma) %>%
+  summarise(count = n(), mean(distance_from_keyword_percent)) %>%
+  slice(215:n()) %>%
+  arrange(-count) %>%
+  filter(lemma != "develop")
+
+ggplot(distance_between_develop_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
+  geom_point() +
+  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions")
+
+# that thing sitting all alone at 21 k is "country" unsurprisingly
+
+ggplot(distance_between_develop_other_words %>% filter(lemma != "country"), mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
+  geom_point() +
+  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions (minus country)")
+
+
+kable(distance_between_develop_other_words %>% slice(1:15))
+```
+
+We had previously only looked at 1970 to 1979. Develop is super meaty, so we'll try to do some analysis on stuff way after 1979. We should expect to see some significant differences in the language of say, the 2000s compared to the language of the 1970s. 
+
+Lets get an annotated corpus over 2000 to 2009. 
+
+```{r}
+annotated_imported_files_2k <- cnlp_annotate(imported_files %>% filter(Year %in% (2000:2009)), as_strings = TRUE)
+
+all_words_only_2k <- cnlp_get_token(annotated_imported_files_2k) %>%
+  filter(!str_detect(word, "^[0-9]*$")) %>%
+  filter(!upos == "PUNCT" & !upos == "SPACE")
+```
+
