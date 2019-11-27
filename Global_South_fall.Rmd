@@ -25,6 +25,7 @@ library(tidytext)
 library(stringr)
 library(SnowballC)
 library(textclean)
+library(sentimentr)
 
 # Used for webscraping
 library(rvest)
@@ -45,12 +46,25 @@ Step 1 is to import the corpus and annotate the entire dataframe. Then I extract
 imported_files <- read_tsv(here::here("Data", "raw_speeches_mikhaylov_project.tsv"))
 
 # Annotate the structure of the 1970s decade speeches. 
-annotated_imported_files <- cnlp_annotate(imported_files %>% filter(Year %in% (1970:1979)), as_strings = TRUE)
+annotated_imported_files_1970 <- cnlp_annotate(imported_files %>% filter(Year %in% (1970:1979)), as_strings = TRUE)
 
-# Get the individual words
-all_words_only_1970 <- cnlp_get_token(annotated_imported_files) %>%
+# Get the individual words for 1970s
+all_words_only_1970 <- cnlp_get_token(annotated_imported_files_1970) %>%
   filter(!str_detect(word, "^[0-9]*$")) %>%
-  filter(!upos == "PUNCT" & !upos == "SPACE")
+  filter(!upos == "PUNCT" & !upos == "SPACE") %>%
+  mutate(lemma = strip(lemma)) %>%
+  # correcting lemma development to be develop
+  mutate(lemma = if_else(lemma == "development", "develop", lemma))
+
+
+annotated_imported_files_2k <- cnlp_annotate(imported_files %>% filter(Year %in% (2000:2009)), as_strings = TRUE)
+
+all_words_only_2k <- cnlp_get_token(annotated_imported_files_2k) %>%
+  filter(!str_detect(word, "^[0-9]*$")) %>%
+  filter(!upos == "PUNCT" & !upos == "SPACE") %>%
+  mutate(lemma = strip(lemma)) %>%
+  #stemming development to distance_between_develop_other_words
+  mutate(lemma = if_else(lemma == "development", "develop", lemma))
 
 data(stop_words)
 ```
@@ -180,11 +194,48 @@ We had previously only looked at 1970 to 1979. Develop is super meaty, so we'll 
 
 Lets get an annotated corpus over 2000 to 2009. 
 
-```{r}
-annotated_imported_files_2k <- cnlp_annotate(imported_files %>% filter(Year %in% (2000:2009)), as_strings = TRUE)
+ITS GONE NOW AND HAS MOVED WAY UP TO THE START SETUP
 
-all_words_only_2k <- cnlp_get_token(annotated_imported_files_2k) %>%
-  filter(!str_detect(word, "^[0-9]*$")) %>%
-  filter(!upos == "PUNCT" & !upos == "SPACE")
+Now lets look at develop and compare it to 1970s stuff. 
+
+```{r}
+distance_between_develop_other_words_2k <- distance_between_words(all_words_only_2k, "develop") %>%
+  select(id, sid, word, lemma, length_of_sentence, distance_from_keyword, distance_from_keyword_percent) %>%
+  anti_join(stop_words) %>%
+  group_by(lemma) %>%
+  summarise(count = n(), mean(distance_from_keyword_percent)) %>%
+  slice(87:n()) %>%
+  arrange(-count) %>%
+  filter(lemma != "develop")
+
+ggplot(distance_between_develop_other_words_2k, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
+  geom_point() +
+  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions")
+
+# that thing sitting all alone at 8.8 k is "country" unsurprisingly
+
+ggplot(distance_between_develop_other_words_2k %>% filter(lemma != "country"), mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
+  geom_point() +
+  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions (minus country)")
+
+
+kable(distance_between_develop_other_words_2k %>% slice(1:15))
 ```
 
+TFIDF
+
+```{r}
+# Gets you all words frequencies in each document
+all_words_only_1970 %>% count(id, lemma)
+
+full_tfidf_1970 <- left_join(all_words_only_1970 %>% count(id, lemma), all_words_only_1970 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+
+
+full_tfidf_1970 <- full_tfidf_1970 %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% str_to_lower(pull(codelist, country.name.en)) == FALSE) %>%
+  arrange(desc(tf_idf))
+full_tfidf_1970
+
+# "Samoa" %in% pull(codelist, country.name.en)
+```
