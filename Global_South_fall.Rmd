@@ -26,6 +26,7 @@ library(stringr)
 library(SnowballC)
 library(textclean)
 library(sentimentr)
+library(tidyr)
 
 # Used for webscraping
 library(rvest)
@@ -54,7 +55,9 @@ all_words_only_1970 <- cnlp_get_token(annotated_imported_files_1970) %>%
   filter(!upos == "PUNCT" & !upos == "SPACE") %>%
   mutate(lemma = strip(lemma)) %>%
   # correcting lemma development to be develop
-  mutate(lemma = if_else(lemma == "development", "develop", lemma))
+  mutate(lemma = if_else(lemma == "development", "develop", lemma)) %>%
+  mutate(id = str_sub(id, end=-5)) %>%
+  separate(id, c("Country", "Session", "Year"), sep = "_", remove = FALSE)
 
 
 annotated_imported_files_2k <- cnlp_annotate(imported_files %>% filter(Year %in% (2000:2009)), as_strings = TRUE)
@@ -225,17 +228,36 @@ kable(distance_between_develop_other_words_2k %>% slice(1:15))
 TFIDF
 
 ```{r}
-# Gets you all words frequencies in each document
-all_words_only_1970 %>% count(id, lemma)
+#List of countries for filtering
+country_filter <- str_to_lower(pull(codelist, country.name.en)) 
 
-full_tfidf_1970 <- left_join(all_words_only_1970 %>% count(id, lemma), all_words_only_1970 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+# Brute force adds stemming but this is kinda unnecessary because lemma works well enough, at least so far.
+all_words_only_1970 <- all_words_only_1970 %>%
+  mutate(word_stem = wordStem(lemma))
 
+seperate_tfidf_1970 <- left_join(all_words_only_1970 %>% count(id, lemma), all_words_only_1970 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
 
-full_tfidf_1970 <- full_tfidf_1970 %>%
+full_tfidf_1970 <- seperate_tfidf_1970 %>%
   bind_tf_idf(lemma, id, n) %>%
-  filter(lemma %in% str_to_lower(pull(codelist, country.name.en)) == FALSE) %>%
-  arrange(desc(tf_idf))
-full_tfidf_1970
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  filter(tf_idf > 0.005)
 
-# "Samoa" %in% pull(codelist, country.name.en)
+full_tfidf_1970
+```
+
+TFIDF for stuff related to govern
+
+```{r}
+sentences_mention_govern_1970 <- distance_between_words(all_words_only_1970, "govern")
+
+govern_1970_seperate_tfidf <- left_join(sentences_mention_govern_1970 %>% count(id, lemma), sentences_mention_govern_1970 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+
+govern_full_tfidf_1970 <- govern_1970_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+
+govern_full_tfidf_1970
 ```
