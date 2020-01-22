@@ -73,6 +73,36 @@ data(stop_words)
 ```
 
 
+```{r}
+annotated_imported_speeches <- read_tsv("../../../../../Desktop/full_un_corpus_annotated.tsv") %>%
+  filter(!str_detect(word, "^[0-9]*$")) %>%
+  filter(!upos == "PUNCT" & !upos == "SPACE") %>%
+  mutate(lemma = strip(lemma)) %>%
+  # correcting lemma development to be develop
+  mutate(lemma = if_else(lemma == "development", "develop", lemma)) %>%
+  mutate(lemma = if_else(lemma == "government", "govern", lemma)) %>%
+  mutate(id = str_sub(id, end=-5)) %>%
+  separate(id, c("Country", "Session", "Year"), sep = "_", remove = FALSE)
+all_words_only <- annotated_imported_speeches
+all_words_only_1970 <- all_words_only %>% filter(Year %in% (1970:1979))
+all_words_only_1980 <- all_words_only %>% filter(Year %in% (1980:1989))
+all_words_only_1990 <- all_words_only %>% filter(Year %in% (1990:1999))
+all_words_only_2k <- all_words_only %>% filter(Year %in% (2000:2009))
+all_words_only_2010 <- all_words_only %>% filter(Year %in% (2010:2018))
+
+```
+
+To import the 1970 and all time stuff so i can skip annotation each time. 
+all_words_only_1970 <- read_tsv("../../../../../Desktop/all_words_only_1970.tsv")
+all_words_only <- read_tsv("../../../../../Desktop/full_un_corpus_annotated.tsv") %>% filter(!str_detect(word, "^[0-9]*$")) %>%
+  filter(!upos == "PUNCT" & !upos == "SPACE") %>%
+  mutate(lemma = strip(lemma)) %>%
+  # correcting lemma development to be develop
+  mutate(lemma = if_else(lemma == "development", "develop", lemma)) %>%
+  mutate(id = str_sub(id, end=-5)) %>%
+  separate(id, c("Country", "Session", "Year"), sep = "_", remove = FALSE)
+  
+  
 The words we are most interested at the moment are:
 
 * Govern-
@@ -179,7 +209,7 @@ distance_between_develop_other_words <- distance_between_words(all_words_only_19
   arrange(-count) %>%
   filter(lemma != "develop")
 
-ggplot(distance_between_develop_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
+       fggplot(distance_between_develop_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
   labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions")
 
@@ -199,7 +229,7 @@ Lets get an annotated corpus over 2000 to 2009.
 
 ITS GONE NOW AND HAS MOVED WAY UP TO THE START SETUP
 
-Now lets look at develop and compare it to 1970s stuff. 
+Now lets look at develop and compare it to 1970s stuff. Especially in the context of a specific nation, say Indonesia. 
 
 ```{r}
 distance_between_develop_other_words_2k <- distance_between_words(all_words_only_2k, "develop") %>%
@@ -213,13 +243,13 @@ distance_between_develop_other_words_2k <- distance_between_words(all_words_only
 
 ggplot(distance_between_develop_other_words_2k, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
-  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions")
+  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions in 2000s")
 
 # that thing sitting all alone at 8.8 k is "country" unsurprisingly
 
 ggplot(distance_between_develop_other_words_2k %>% filter(lemma != "country"), mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
-  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions (minus country)")
+  labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions (minus country) in 2000s")
 
 
 kable(distance_between_develop_other_words_2k %>% slice(1:15))
@@ -232,32 +262,74 @@ TFIDF
 country_filter <- str_to_lower(pull(codelist, country.name.en)) 
 
 # Brute force adds stemming but this is kinda unnecessary because lemma works well enough, at least so far.
-all_words_only_1970 <- all_words_only_1970 %>%
+all_words_only <- all_words_only %>%
   mutate(word_stem = wordStem(lemma))
 
-seperate_tfidf_1970 <- left_join(all_words_only_1970 %>% count(id, lemma), all_words_only_1970 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+seperate_tfidf <- left_join(all_words_only %>% count(id, lemma), all_words_only %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
 
-full_tfidf_1970 <- seperate_tfidf_1970 %>%
+full_tfidf <- seperate_tfidf %>%
   bind_tf_idf(lemma, id, n) %>%
   filter(lemma %in% country_filter == FALSE) %>%
   arrange(desc(tf_idf)) %>%
   filter(tf_idf > 0.005)
 
-full_tfidf_1970
+full_tfidf
 ```
 
 TFIDF for stuff related to govern
 
 ```{r}
 sentences_mention_govern_1970 <- distance_between_words(all_words_only_1970, "govern")
+sentences_mention_govern_1980 <- distance_between_words(all_words_only_1980, "govern")
+sentences_mention_govern_1990 <- distance_between_words(all_words_only_1990, "govern")
+sentences_mention_govern_2k <- distance_between_words(all_words_only_2k, "govern")
+sentences_mention_govern_2010 <- distance_between_words(all_words_only_2010, "govern")
+
 
 govern_1970_seperate_tfidf <- left_join(sentences_mention_govern_1970 %>% count(id, lemma), sentences_mention_govern_1970 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
 
-govern_full_tfidf_1970 <- govern_1970_seperate_tfidf %>%
+govern_full_tfidf_1970_ided <- govern_1970_seperate_tfidf %>%
   bind_tf_idf(lemma, id, n) %>%
   filter(lemma %in% country_filter == FALSE) %>%
   arrange(desc(tf_idf)) %>%
   anti_join(stop_words, by = c("lemma" = "word"))
 
-govern_full_tfidf_1970
+govern_full_tfidf_1970_yeared <- govern_full_tfidf_1970_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  count(Year, lemma) %>%
+  arrange(desc(n)) %>%
+  filter(lemma != "govern" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s")
+
+
+govern_full_tfidf_1970_ided
+govern_full_tfidf_1970_yeared
 ```
+
+```{r}
+sentences_mention_govern_2k <- distance_between_words(all_words_only_2k, "govern")
+
+govern_2k_seperate_tfidf <- left_join(sentences_mention_govern_2k %>% count(id, lemma), sentences_mention_govern_2k %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+
+govern_full_tfidf_2k <- govern_2k_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+
+govern_full_tfidf_2k
+```
+
+Do this but only for nouns. + verbs + adjs in 1970 and 2000s. Do it for these three words for a total of 18 tables. 1970s and 2000s, nouns verbs adjs for * Govern-
+* Develop-
+* Secur-

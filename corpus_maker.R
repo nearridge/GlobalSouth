@@ -71,3 +71,7 @@ bigrams <- corpus %>%
 write_tsv(unigrams, "Data/unigrams_mikhaylov_project.tsv", na = "NA", col_names = TRUE)
 write_tsv(bigrams, "Data/bigrams_mikhaylov_project.tsv", na = "NA", col_names = TRUE)
 
+# THIS IS THE CONSTRUCTION OF DATA THAT IS ACTUALLY USED IN GLOBAL_SOUTH_FALL.RMD STARTING ON 12/12/19.
+full_annotation <- cnlp_annotate(imported_files, as_strings = TRUE)
+all_words_annotation <- cnlp_get_token(full_annotation)
+write_tsv(all_words_annotation, "../../../../../Desktop/full_un_corpus_annotated.tsv", na = "NA", col_names = TRUE)
