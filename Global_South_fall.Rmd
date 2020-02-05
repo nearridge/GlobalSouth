@@ -255,16 +255,47 @@ ggplot(distance_between_develop_other_words_2k %>% filter(lemma != "country"), m
 kable(distance_between_develop_other_words_2k %>% slice(1:15))
 ```
 
-TFIDF
+# TFIDF
 
 ```{r}
 #List of countries for filtering
 country_filter <- str_to_lower(pull(codelist, country.name.en)) 
 
+# I DONT WANT TO STEM RIGHT NOW. THAT MEANS RIGHT AND RIGHTS ARE DIFFERENT THINGS
 # Brute force adds stemming but this is kinda unnecessary because lemma works well enough, at least so far.
-all_words_only <- all_words_only %>%
-  mutate(word_stem = wordStem(lemma))
+#all_words_only <- all_words_only %>%
+#  mutate(word_stem = wordStem(lemma))
 
+# Function that gets the top tfidf words for each year in a decade. This is applied to a dataframe that already has done tfidf analyis on a bunch of words. 
+tfidf_keyword_decades <- function(df_of_tfidf_of_every_individual_word, decade) {
+  df_of_tfidf_of_every_individual_word <- df_of_tfidf_of_every_individual_word %>% 
+  separate(id, c("Country", "Session", "Year")) %>%
+  filter(Year %in% seq(decade, decade+9)) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "develop" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10) 
+  return(df_of_tfidf_of_every_individual_word)
+}
+```
+
+TFIDF of the most unique words said at the UN ever. This is not insightful. 
+
+```{r}
 seperate_tfidf <- left_join(all_words_only %>% count(id, lemma), all_words_only %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
 
 full_tfidf <- seperate_tfidf %>%
@@ -279,6 +310,14 @@ full_tfidf
 TFIDF for stuff related to govern
 
 ```{r}
+sentences_mention_govern <- distance_between_words(all_words_only, "govern")
+num_words_in_each_speech_mentioning_govern <- sentences_mention_govern %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n))
+
+mentions_of_aux_words_in_sentences_containing_govern <- 
+```
+
+```{r}
+#these are unstemmed
 sentences_mention_govern_1970 <- distance_between_words(all_words_only_1970, "govern")
 sentences_mention_govern_1980 <- distance_between_words(all_words_only_1980, "govern")
 sentences_mention_govern_1990 <- distance_between_words(all_words_only_1990, "govern")
@@ -287,8 +326,32 @@ sentences_mention_govern_2010 <- distance_between_words(all_words_only_2010, "go
 
 
 govern_1970_seperate_tfidf <- left_join(sentences_mention_govern_1970 %>% count(id, lemma), sentences_mention_govern_1970 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+govern_1980_seperate_tfidf <- left_join(sentences_mention_govern_1980 %>% count(id, lemma), sentences_mention_govern_1980 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+govern_1990_seperate_tfidf <- left_join(sentences_mention_govern_1990 %>% count(id, lemma), sentences_mention_govern_1990 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+govern_2k_seperate_tfidf <- left_join(sentences_mention_govern_2k %>% count(id, lemma), sentences_mention_govern_2k %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+govern_2010_seperate_tfidf <- left_join(sentences_mention_govern_2010 %>% count(id, lemma), sentences_mention_govern_2010 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
 
 govern_full_tfidf_1970_ided <- govern_1970_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+govern_full_tfidf_1980_ided <- govern_1980_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+govern_full_tfidf_1990_ided <- govern_1990_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+govern_full_tfidf_2k_ided <- govern_2k_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+govern_full_tfidf_2010_ided <- govern_2010_seperate_tfidf %>%
   bind_tf_idf(lemma, id, n) %>%
   filter(lemma %in% country_filter == FALSE) %>%
   arrange(desc(tf_idf)) %>%
@@ -296,8 +359,12 @@ govern_full_tfidf_1970_ided <- govern_1970_seperate_tfidf %>%
 
 govern_full_tfidf_1970_yeared <- govern_full_tfidf_1970_ided %>%
   separate(id, c("Country", "Session", "Year")) %>%
-  count(Year, lemma) %>%
-  arrange(desc(n)) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
   filter(lemma != "govern" 
          & lemma != "pron" 
          & lemma != "people" 
@@ -309,26 +376,278 @@ govern_full_tfidf_1970_yeared <- govern_full_tfidf_1970_ided %>%
          & lemma != "nation"
          & lemma != "nations"
          & lemma != "international"
-         & lemma != "'s")
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10)
 
+govern_full_tfidf_1980_yeared <- govern_full_tfidf_1980_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "govern" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10)
 
-govern_full_tfidf_1970_ided
+govern_full_tfidf_1990_yeared <- govern_full_tfidf_1990_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "govern" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10)
+
+govern_full_tfidf_2k_yeared <- govern_full_tfidf_2k_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "govern" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10)
+
+govern_full_tfidf_2010_yeared <- govern_full_tfidf_2010_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "govern" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10) 
+
 govern_full_tfidf_1970_yeared
+govern_full_tfidf_1980_yeared
+govern_full_tfidf_1990_yeared
+govern_full_tfidf_2k_yeared
+govern_full_tfidf_2010_yeared
 ```
 
+Develop
+
 ```{r}
-sentences_mention_govern_2k <- distance_between_words(all_words_only_2k, "govern")
+sentences_mention_develop_1970 <- distance_between_words(all_words_only_1970, "develop")
+sentences_mention_develop_1980 <- distance_between_words(all_words_only_1980, "develop")
+sentences_mention_develop_1990 <- distance_between_words(all_words_only_1990, "develop")
+sentences_mention_develop_2k <- distance_between_words(all_words_only_2k, "develop")
+sentences_mention_develop_2010 <- distance_between_words(all_words_only_2010, "develop")
 
-govern_2k_seperate_tfidf <- left_join(sentences_mention_govern_2k %>% count(id, lemma), sentences_mention_govern_2k %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
 
-govern_full_tfidf_2k <- govern_2k_seperate_tfidf %>%
+develop_1970_seperate_tfidf <- left_join(sentences_mention_develop_1970 %>% count(id, lemma), sentences_mention_develop_1970 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+develop_1980_seperate_tfidf <- left_join(sentences_mention_develop_1980 %>% count(id, lemma), sentences_mention_develop_1980 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+develop_1990_seperate_tfidf <- left_join(sentences_mention_develop_1990 %>% count(id, lemma), sentences_mention_develop_1990 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+develop_2k_seperate_tfidf <- left_join(sentences_mention_develop_2k %>% count(id, lemma), sentences_mention_develop_2k %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+develop_2010_seperate_tfidf <- left_join(sentences_mention_develop_2010 %>% count(id, lemma), sentences_mention_develop_2010 %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+
+develop_full_tfidf_1970_ided <- develop_1970_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+develop_full_tfidf_1980_ided <- develop_1980_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+develop_full_tfidf_1990_ided <- develop_1990_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+develop_full_tfidf_2k_ided <- develop_2k_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+develop_full_tfidf_2010_ided <- develop_2010_seperate_tfidf %>%
   bind_tf_idf(lemma, id, n) %>%
   filter(lemma %in% country_filter == FALSE) %>%
   arrange(desc(tf_idf)) %>%
   anti_join(stop_words, by = c("lemma" = "word"))
 
-govern_full_tfidf_2k
+develop_full_tfidf_1970_yeared <- develop_full_tfidf_1970_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "develop" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10)
+
+develop_full_tfidf_1980_yeared <- develop_full_tfidf_1980_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "develop" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10)
+
+develop_full_tfidf_1990_yeared <- develop_full_tfidf_1990_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "develop" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10)
+
+develop_full_tfidf_2k_yeared <- develop_full_tfidf_2k_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "develop" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10)
+
+develop_full_tfidf_2010_yeared <- develop_full_tfidf_2010_ided %>%
+  separate(id, c("Country", "Session", "Year")) %>%
+  group_by(Year, lemma) %>%
+  summarize(mean_tfidf = mean(tf_idf), n = n()) %>%
+  filter(n >= 5) %>%
+  ungroup() %>%
+  mutate(ratio = mean_tfidf/n) %>%
+  arrange(desc(ratio)) %>%
+  filter(lemma != "develop" 
+         & lemma != "pron" 
+         & lemma != "people" 
+         & lemma != ""
+         & lemma != "country"
+         & lemma != "countries"
+         & lemma != ""
+         & lemma != "united"
+         & lemma != "nation"
+         & lemma != "nations"
+         & lemma != "international"
+         & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10) 
+
+develop_full_tfidf_1970_yeared
+develop_full_tfidf_1980_yeared
+develop_full_tfidf_1990_yeared
+develop_full_tfidf_2k_yeared
+develop_full_tfidf_2010_yeared
+
+# develop_full_tfidf_1970_yeared %>%
+#  arrange(-desc(Year))
 ```
+
+```{r}
+sentences_mention_rights <- distance_between_words(all_words_only, "right")
+
+right_all_seperate_tfidf <- left_join(sentences_mention_rights %>% count(id, lemma), sentences_mention_rights %>% count(id, lemma) %>% group_by(id) %>% summarize(`words in speech` = sum(n)))
+
+right_full_tfidf_all_ided <- right_all_seperate_tfidf %>%
+  bind_tf_idf(lemma, id, n) %>%
+  filter(lemma %in% country_filter == FALSE) %>%
+  arrange(desc(tf_idf)) %>%
+  anti_join(stop_words, by = c("lemma" = "word"))
+
+
+```
+
+
+```{r}
+rerun the big chunk above for rights and capibailities
+adjust the words from funciton to look at sentence before and after
+
+
+```
+
 
 Do this but only for nouns. + verbs + adjs in 1970 and 2000s. Do it for these three words for a total of 18 tables. 1970s and 2000s, nouns verbs adjs for * Govern-
 * Develop-
