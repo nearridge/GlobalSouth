@@ -3,11 +3,16 @@ title: "Global_South_Winter"
 author: "Neeraj Sharma"
 date: "3/2/2020"
 output: github_document
+always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+# Setup
+
+Step one is the set up the environment. A number of packages are necessary for this analysis. 
 
 ```{r message = FALSE, warning = FALSE}
 # Relevant to data importation, structuring and visualization
@@ -15,6 +20,7 @@ library(tidyverse)
 library(knitr)
 library(readr)
 library(here)
+library(excelR)
 
 # Relevant to data formatting
 library(lubridate)
@@ -28,7 +34,7 @@ library(textclean)
 library(sentimentr)
 library(tidyr)
 
-# Used for webscraping
+# Used for webscraping. This created the global north/south divide exploration that I did in Fall 2019. 
 library(rvest)
 
 # Andres' fancy package for text analysis
@@ -37,12 +43,30 @@ library(cleanNLP)
 reticulate::use_python("/Users/neerajsharma/opt/anaconda3/bin/python.app", required = TRUE)
 # I'm running the spacy implimentation of the NLP backend. I'm not sure exactly what this means. 
 cnlp_init_spacy()
-# reticulate::py_discover_config(required_module="cleannlp")
 ```
 
-# Setup
+This shows the python implimentation this project is run off of, as well as the location of the cleanNLP package within this version of Anaconda Python. On Feburary 26, 2020, I updated my Macbook Pro from macOS Mojave to macOS Catalina. In the process of doing so, Anaconda Python (and thus the primary text processing engine used) was bricked because macOS refused to recognize developer-produced software in the root folder. Additionally, I lost the most recent work on the [Global_South_fall.rmd](https://github.com/nearridge/GlobalSouth/blob/master/Global_South_fall.md) file. That was quite tragic and I'm not entirely sure if something super important got lost, but I had a recent enough github backup so I was able to do some very creative downloading. 
 
-Step 1 is to import the corpus that I previouslly annotated of every UNGA speech. That was using corpusmaker.r. I store it on my desktop, and a version can also be found on UChicago box. 
+```{r}
+reticulate::py_discover_config(required_module="cleannlp")
+```
+
+Step two is to import the corpus that I previously produced by annotating every United Nations General Assembly speech from 1970 to the present day. That was using corpus_maker.r in roughly the manner described below. While I was working on this project, I stored the output of corpus_maker.r in a handful of different locations. First, I stored the full annotated corpus produced using cleanNLP on my desktop and on UChicago box. I store secondary versions that were produced using TidyText on GitHub. This was a rather inefficient method, but it's in the past. 
+
+To produce the corpus, the following approximate code was run in corpus_maker.r:
+
+```{r eval = FALSE}
+imported_files <- read_tsv(here("Data", "raw_speeches_mikhaylov_project.tsv"))
+full_annotation <- cnlp_annotate(imported_files, as_strings = TRUE)
+all_words_annotation <- cnlp_get_token(full_annotation)
+write_tsv(all_words_annotation, "../../../../../Desktop/full_un_corpus_annotated.tsv", na = "NA", col_names = TRUE)
+```
+
+What this does is it reads in the .tsv file downloaded from the [Harvard Dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/0TJX8Y) that I store locally on my computer, then processes it through the cleanNLP annotation scheme using the spaCy backend. This produces analysis at several levels: tokens, sentences, and documents. For the purposes of this analysis, I only analyze the token level. I only stayed at this low-level of analysis for a few reasons. 
+
+First, I am a novice programmer. I basically took what I was able to make work, and ran with it. Token-level analysis was the only thing that I was able to really get working on a large scale with the database. I corresponded with Andres Uribe [(uribe@uchicago.edu)](uribe@uchicago.edu), a PhD student in the Political Science department who is familiar with text analysis and R, to impliment analysis around `get_sentences()` but I wasn't able to make that happen.
+
+Secondly, Professor Bradley is most interested in tracking vocabularies surrounding keywords. Vocabularies are made up of individual words, not sentences of full documents. As a result, the unit of communcation Professor Bradley is most interested in analyzing at this point is words, so I focus almost all my efforts on words alone. 
 
 ```{r cache = TRUE, cache.lazy = FALSE, include = FALSE}
 annotated_imported_speeches <- read_tsv("../../../../../Desktop/full_un_corpus_annotated.tsv") %>%
@@ -60,9 +84,11 @@ all_words_only_1970 <- all_words_only %>% filter(Year %in% (1970:1979))
 all_words_only_2k <- all_words_only %>% filter(Year %in% (2000:2009))
 ```
 
-# Function to determine the distance between words
+## Functions to determine the location of keywords, sentences around keywords, and distances between words
 
-This is a function that finds out the distance between two words in a string. It is my baby. It's important because my (read: Neeraj's possibly misinformed) hypothesis is that words relevant to a keyword will be said closer in a sentence to the keyword itself. At minimum, important words will be mentioned a lot. 
+Next are three functions that are relevant to nuanced text analysis. 
+
+First, I wrote a function to identify each sentence in each speech that contains a specific keyword. Even sentences that mention the keyword multiple times work. 
 
 ```{r}
 # returns full tidytext df of sentences containing a specific keyword
@@ -74,6 +100,11 @@ sentences_with_keyword <- function(df, keyword) {
     left_join(df)
   return(returner)
 }
+```
+
+Secondly, I wrote a function that extends that by getting the sentence before and after. This isn't perfect, but it works well enough. Sometimes duplicates or non-sentences are created but on large scales, this is trivial. 
+
+```{r}
 # This grabs the sentence in front of, the sentence itself, and the sentence behind the keyword. 
 local_sentences_with_keyword <- function(df, keyword) {
   sentence_ids <- df %>%
@@ -91,6 +122,11 @@ local_sentences_with_keyword <- function(df, keyword) {
     arrange(id, sid)
   return(returner)
 }
+```
+
+Finally, I wrote a function that finds out the distance between two words in a string. It is my baby. It's important because my (read: Neeraj's possibly misinformed) hypothesis is that words relevant to a keyword will be said closer in a sentence to the keyword itself. At minimum, important words will be mentioned a lot. The function is pretty complicated but well coded and if a keyword is mentioned multiple times, the distance from a word to the keyword is minimized. 
+
+```{r}
 # Builds a function that counts how far apart two words are.
 # the df will almost allways be all_words_only
 distance_between_words <- function(df, keyword) {
@@ -128,6 +164,8 @@ distance_between_words <- function(df, keyword) {
 }
 ```
 
+# Analysis
+
 When we first started out in the Fall, we thought that the words we were most interested in were:
 
 * Govern-
@@ -136,7 +174,7 @@ When we first started out in the Fall, we thought that the words we were most in
 
 and any relevant derivatives of them. Those are words that I tagged when they appeared in a speech. I need to update the next three sections of code to reflect the current function that gets distances between words and abilities to do the entire timespan of the corpus; not just 1970 to 1979. 
 
-# Mentions of Govern with related words form the 1970 to 1979 corpus
+## Mentions of Govern with related words form the 1970 to 1979 corpus
 
 ```{r}
 distance_between_govern_other_words <- distance_between_words(all_words_only_1970, "govern") %>%
@@ -156,7 +194,7 @@ kable(distance_between_govern_other_words %>% slice(1:15))
 ```
 
 
-# Mentions of Secure with related words form the 1970 to 1979 corpus
+## Mentions of Secure with related words form the 1970 to 1979 corpus
 
 ```{r}
 distance_between_secure_other_words <- distance_between_words(all_words_only_1970, "secure") %>%
@@ -173,7 +211,7 @@ ggplot(distance_between_secure_other_words, mapping = aes(`count`, `mean(distanc
 kable(distance_between_secure_other_words %>% slice(1:15))
 ```
 
-# Mentions of Develop with related words form the 1970 to 1979 corpus
+## Mentions of Develop with related words form the 1970 to 1979 corpus
 
 ```{r}
 distance_between_develop_other_words <- distance_between_words(all_words_only_1970, "develop") %>%
@@ -272,11 +310,36 @@ tfidf_aux_word_organizer <- function(df_of_tfidf_of_every_individual_word) {
 printer_producer <- function(dataframe) {
   dataframe <- dataframe %>% 
     arrange(-desc(Year))
-  data <- list()
-  for (i in seq(as.double(min(dataframe$Year)), as.double(max(dataframe$Year)))) {
-    data <- bind_cols(data, dataframe %>% filter(Year == i))
+  data1 <- list()
+  data2 <- list()
+  for (i in seq(as.double(min(dataframe$Year)), as.double(max(dataframe$Year)) - 5)) {
+    data1 <- bind_cols(data1, dataframe %>% filter(Year == i))
   }
-  return(data)
+  for (j in seq(as.double(max(dataframe$Year)) - 4, as.double(max(dataframe$Year)))) {
+    data2 <- bind_cols(data2, dataframe %>% filter(Year == j))
+  }
+  return(bind_rows(data1, data2))
+}
+
+exceler <- function(dataframe) {
+  dataframe <- dataframe %>% 
+    arrange(-desc(Year))
+  data1 <- list()
+  data2 <- list()
+  data3 <- list()
+  data4 <- list()
+  for (i in seq(as.double(min(dataframe$Year)), as.double(max(dataframe$Year)) - 7)) {
+    data1 <- bind_cols(data1, dataframe %>% filter(Year == i))
+  }
+  for (j in seq(as.double(max(dataframe$Year)) - 6, as.double(max(dataframe$Year)) - 4)) {
+    data2 <- bind_cols(data2, dataframe %>% filter(Year == j))
+  }
+  for (k in seq(as.double(max(dataframe$Year)) - 3, as.double(max(dataframe$Year)) - 1)) {
+    data3 <- bind_cols(data3, dataframe %>% filter(Year == k))
+  }
+  data4 <- bind_cols(data4, dataframe %>% filter(Year == as.double(max(dataframe$Year))))
+  
+  return(bind_rows(data1, data2, data3, data4))
 }
 ```
 
@@ -300,7 +363,10 @@ govern_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_senten
 govern_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 1990, 9) %>% select(-Year, -Session, -Country))
 govern_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 2000, 9) %>% select(-Year, -Session, -Country))
 govern_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 2010, 9) %>% select(-Year, -Session, -Country))
-#View(bind_rows(printer_producer(govern_1970s), printer_producer(govern_1980s), printer_producer(govern_1990s), printer_producer(govern_2000s), printer_producer(govern_2010s)))
+
+govern_single_alltime <- bind_rows(printer_producer(govern_1970s), printer_producer(govern_1980s), printer_producer(govern_1990s), printer_producer(govern_2000s), printer_producer(govern_2010s))
+
+excelTable(govern_single_alltime, editable = FALSE, pagination = 20)
 ```
 
 Local Sentences included. 
@@ -319,6 +385,11 @@ extended_govern_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_
 extended_govern_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_govern, 2000, 9) %>% select(-Year, -Session, -Country))
 extended_govern_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_govern, 2010, 9) %>% select(-Year, -Session, -Country))
 #View(bind_rows(printer_producer(extended_govern_1970s), printer_producer(extended_govern_1980s), printer_producer(extended_govern_1990s), printer_producer(extended_govern_2000s), printer_producer(extended_govern_2010s)))
+
+govern_local_alltime <- bind_rows(printer_producer(extended_govern_1970s),printer_producer(extended_govern_1980s),printer_producer(extended_govern_1990s),
+                     printer_producer(extended_govern_2000s),printer_producer(extended_govern_2010s))
+
+excelTable(govern_local_alltime, editable = FALSE, pagination = 20)
 ```
 
 ## TFIDF for stuff related to Develop
@@ -409,26 +480,6 @@ Relevant Words:
 * capacity, mentioned 5748 times
 * ability, mentioned 3239 times. I do not include this in my calculation however. 
 
-in comparison:
-
-* right, mentioned 48186 times
-* develop, mentioned 113759 times
-* govern, 47939
-
-I found this out by running the following code with view around it and without slice. I found the counts of words using the command f function. 
-
-```{r}
-all_words_only %>% count(lemma) %>% arrange(desc(n)) %>% anti_join(stop_words, by = c("lemma" = "word")) %>% slice(1:10)
-```
-
-To check in the future. Look at these for just one sentence. Lemmas
-
-* responsibility, mentions 14k 
-* dialogue, 11k
-* **sustainable	, 11k**
-* **solidarity, 8k**
-* **resilience + resilient + resiliency combined.** 
-
 Single sentence. 
 
 ```{r}
@@ -464,6 +515,48 @@ extended_capability_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_wo
 extended_capability_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_capability, 2010, 9) %>% select(-Year, -Session, -Country))
 #View(bind_rows(printer_producer(extended_capability_1970s), printer_producer(extended_capability_1980s), printer_producer(extended_capability_1990s), printer_producer(extended_capability_2000s), printer_producer(extended_capability_2010s)))
 ```
+
+in comparison:
+
+* right, mentioned 48186 times
+* develop, mentioned 113759 times
+* govern, 47939
+
+I found this out by running the following code with view around it and without slice. I found the counts of words using the command f function. 
+
+```{r}
+all_words_only %>% count(lemma) %>% arrange(desc(n)) %>% anti_join(stop_words, by = c("lemma" = "word")) %>% slice(1:10)
+```
+
+To check in the future. Look at these for just one sentence. Lemmas
+
+* responsibility, mentions 14k 
+* dialogue, 11k
+* **sustainable	, 11k**
+* **solidarity, 8k**
+* **resilience + resilient + resiliency combined.** 
+
+```{r}
+sentences_mention_responsibility <- sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "responsible", "responsibility", lemma)), "responsibility")
+num_words_in_each_speech_mentioning_responsibility <- sentences_mention_responsibility %>%  
+  count(id, lemma) %>% 
+  group_by(id) %>% 
+  summarize(`words in speech` = sum(n))
+mentions_of_aux_words_in_sentences_containing_responsibility <- left_join(sentences_mention_responsibility %>% count(id, lemma), num_words_in_each_speech_mentioning_responsibility) %>%
+  separate(id, c("Country", "Session", "Year"), remove = FALSE)
+responsibility_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_responsibility, 1970, 9) %>% select(-Year, -Session, -Country))
+responsibility_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_responsibility, 1980, 9) %>% select(-Year, -Session, -Country))
+responsibility_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_responsibility, 1990, 9) %>% select(-Year, -Session, -Country))
+responsibility_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_responsibility, 2000, 9) %>% select(-Year, -Session, -Country))
+responsibility_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_responsibility, 2010, 9) %>% select(-Year, -Session, -Country))
+#View(bind_rows(printer_producer(capability_1970s), printer_producer(capability_1980s), printer_producer(capability_1990s), printer_producer(capability_2000s),printer_producer(capability_2010s)))
+
+responsibility_alltime <- bind_rows(printer_producer(responsibility_1970s), printer_producer(responsibility_1980s), printer_producer(responsibility_1990s), printer_producer(responsibility_2000s), printer_producer(responsibility_2010s))
+
+excelTable(responsibility_alltime, editable = FALSE, pagination = 20)
+```
+
+
 
 Feb 5 2020
 We need to think about extra sentences as going farther out in terms of accuracy of the valance key words. Single sentence gives us the core language surrounding the keyword. If you were to argue the greater sentences, you'd argue that they are less convincing but still substantive. 
