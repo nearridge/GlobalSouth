@@ -1,23 +1,49 @@
----
-title: "Global_South_Winter"
-author: "Neeraj Sharma"
-date: "3/2/2020"
-output: github_document
----
+Global\_South\_Winter
+================
+Neeraj Sharma
+3/2/2020
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r message = FALSE, warning = FALSE}
+``` r
 # Relevant to data importation, structuring and visualization
 library(tidyverse)
+```
+
+    ## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
+
+    ## ✔ ggplot2 3.2.1     ✔ purrr   0.3.3
+    ## ✔ tibble  2.1.3     ✔ dplyr   0.8.4
+    ## ✔ tidyr   1.0.2     ✔ stringr 1.4.0
+    ## ✔ readr   1.3.1     ✔ forcats 0.4.0
+
+    ## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ✖ dplyr::filter() masks stats::filter()
+    ## ✖ dplyr::lag()    masks stats::lag()
+
+``` r
 library(knitr)
 library(readr)
 library(here)
+```
 
+    ## here() starts at /Users/neerajsharma/Google Drive/1st Year/4Summer Quarter/Bradley Research Project/GlobalSouth
+
+``` r
 # Relevant to data formatting
 library(lubridate)
+```
+
+    ## 
+    ## Attaching package: 'lubridate'
+
+    ## The following object is masked from 'package:here':
+    ## 
+    ##     here
+
+    ## The following object is masked from 'package:base':
+    ## 
+    ##     date
+
+``` r
 library(countrycode)
 
 # Relevant to text analysis
@@ -30,7 +56,22 @@ library(tidyr)
 
 # Used for webscraping
 library(rvest)
+```
 
+    ## Loading required package: xml2
+
+    ## 
+    ## Attaching package: 'rvest'
+
+    ## The following object is masked from 'package:purrr':
+    ## 
+    ##     pluck
+
+    ## The following object is masked from 'package:readr':
+    ## 
+    ##     guess_encoding
+
+``` r
 # Andres' fancy package for text analysis
 library(reticulate)
 library(cleanNLP)
@@ -42,9 +83,12 @@ cnlp_init_spacy()
 
 # Setup
 
-Step 1 is to import the corpus that I previouslly annotated of every UNGA speech. That was using corpusmaker.r. I store it on my desktop, and a version can also be found on UChicago box. 
+Step 1 is to import the corpus that I previouslly annotated of every
+UNGA speech. That was using corpusmaker.r. I store it on my desktop, and
+a version can also be found on UChicago
+box.
 
-```{r cache = TRUE, cache.lazy = FALSE, include = FALSE}
+``` r
 annotated_imported_speeches <- read_tsv("../../../../../Desktop/full_un_corpus_annotated.tsv") %>%
   filter(!str_detect(word, "^[0-9]*$")) %>%
   filter(!upos == "PUNCT" & !upos == "SPACE") %>%
@@ -55,6 +99,21 @@ annotated_imported_speeches <- read_tsv("../../../../../Desktop/full_un_corpus_a
   mutate(lemma = if_else(lemma == "government", "govern", lemma)) %>%
   mutate(id = str_sub(id, end=-5)) %>%
   separate(id, c("Country", "Session", "Year"), sep = "_", remove = FALSE)
+```
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   id = col_character(),
+    ##   sid = col_double(),
+    ##   tid = col_double(),
+    ##   word = col_character(),
+    ##   lemma = col_character(),
+    ##   upos = col_character(),
+    ##   pos = col_character(),
+    ##   cid = col_double()
+    ## )
+
+``` r
 all_words_only <- annotated_imported_speeches
 all_words_only_1970 <- all_words_only %>% filter(Year %in% (1970:1979))
 all_words_only_2k <- all_words_only %>% filter(Year %in% (2000:2009))
@@ -62,9 +121,13 @@ all_words_only_2k <- all_words_only %>% filter(Year %in% (2000:2009))
 
 # Function to determine the distance between words
 
-This is a function that finds out the distance between two words in a string. It is my baby. It's important because my (read: Neeraj's possibly misinformed) hypothesis is that words relevant to a keyword will be said closer in a sentence to the keyword itself. At minimum, important words will be mentioned a lot. 
+This is a function that finds out the distance between two words in a
+string. It is my baby. It’s important because my (read: Neeraj’s
+possibly misinformed) hypothesis is that words relevant to a keyword
+will be said closer in a sentence to the keyword itself. At minimum,
+important words will be mentioned a lot.
 
-```{r}
+``` r
 # returns full tidytext df of sentences containing a specific keyword
 sentences_with_keyword <- function(df, keyword) {
   returner <- df %>%
@@ -128,17 +191,22 @@ distance_between_words <- function(df, keyword) {
 }
 ```
 
-When we first started out in the Fall, we thought that the words we were most interested in were:
+When we first started out in the Fall, we thought that the words we were
+most interested in were:
 
-* Govern-
-* Develop-
-* Secur-
+  - Govern-
+  - Develop-
+  - Secur-
 
-and any relevant derivatives of them. Those are words that I tagged when they appeared in a speech. I need to update the next three sections of code to reflect the current function that gets distances between words and abilities to do the entire timespan of the corpus; not just 1970 to 1979. 
+and any relevant derivatives of them. Those are words that I tagged when
+they appeared in a speech. I need to update the next three sections of
+code to reflect the current function that gets distances between words
+and abilities to do the entire timespan of the corpus; not just 1970 to
+1979.
 
 # Mentions of Govern with related words form the 1970 to 1979 corpus
 
-```{r}
+``` r
 distance_between_govern_other_words <- distance_between_words(all_words_only_1970, "govern") %>%
   select(id, sid, word, lemma, slength, distance_between_word_and_keyword, distance_from_keyword_percent) %>%
   anti_join(stop_words) %>%
@@ -147,18 +215,48 @@ distance_between_govern_other_words <- distance_between_words(all_words_only_197
   slice(27:n()) %>%
   arrange(-count) %>%
   filter(lemma != "govern")
+```
+
+    ## Joining, by = c("id", "sid")
+    ## Joining, by = c("id", "sid")
+
+    ## Joining, by = "word"
+
+``` r
 ggplot(distance_between_govern_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
   labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Govern) versus mentions")
+```
+
+![](Global_South_Winter_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+``` r
 # related words: scatter plot with count of total times said on x axis and distance from govern on y axis
 # for some reason, the sentence division within the annotated_imported_files object is empty so cnlp_get_sentences returns an empty dataframe. What do I need to configure differently to get a) sentences to be parsed by the cnlp_annotate function up here and b) extract actual sentences and any information at that level.
 kable(distance_between_govern_other_words %>% slice(1:15))
 ```
 
+| lemma         | count | mean(distance\_from\_keyword\_percent) |
+| :------------ | ----: | -------------------------------------: |
+| pron          |  4364 |                              0.3088577 |
+| people        |  2913 |                              0.3020368 |
+| the           |  2531 |                              0.2594704 |
+| united        |  2252 |                              0.3557453 |
+| country       |  1979 |                              0.4001479 |
+| international |  1648 |                              0.4043956 |
+| nations       |  1559 |                              0.4315169 |
+| states        |  1133 |                              0.3420868 |
+| world         |  1093 |                              0.4387548 |
+| republic      |  1085 |                              0.2507780 |
+| develop       |  1052 |                              0.4548922 |
+| assembly      |  1041 |                              0.3841942 |
+| state         |  1030 |                              0.1934079 |
+| south         |  1013 |                              0.2441387 |
+| support       |   996 |                              0.2740290 |
 
 # Mentions of Secure with related words form the 1970 to 1979 corpus
 
-```{r}
+``` r
 distance_between_secure_other_words <- distance_between_words(all_words_only_1970, "secure") %>%
   select(id, sid, word, lemma, slength, distance_between_word_and_keyword, distance_from_keyword_percent) %>%
   anti_join(stop_words) %>%
@@ -167,15 +265,46 @@ distance_between_secure_other_words <- distance_between_words(all_words_only_197
   slice(24:n()) %>%
   arrange(-count) %>%
   filter(lemma != "secure")
+```
+
+    ## Joining, by = c("id", "sid")
+    ## Joining, by = c("id", "sid")
+
+    ## Joining, by = "word"
+
+``` r
 ggplot(distance_between_secure_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
   labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Secure) versus mentions")
+```
+
+![](Global_South_Winter_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+``` r
 kable(distance_between_secure_other_words %>% slice(1:15))
 ```
 
+| lemma         | count | mean(distance\_from\_keyword\_percent) |
+| :------------ | ----: | -------------------------------------: |
+| peace         |   318 |                              0.2269418 |
+| pron          |   265 |                              0.5809695 |
+| people        |   239 |                              0.3166736 |
+| world         |   188 |                              0.3218985 |
+| country       |   171 |                              0.3519784 |
+| recognize     |   169 |                              0.1203065 |
+| the           |   163 |                              0.5567938 |
+| international |   162 |                              0.3105630 |
+| israel        |   154 |                              0.2991619 |
+| states        |   144 |                              0.2968760 |
+| boundary      |   141 |                              0.1040082 |
+| united        |   140 |                              0.3632544 |
+| right         |   138 |                              0.2578147 |
+| nations       |   120 |                              0.3655365 |
+| develop       |   113 |                              0.3503016 |
+
 # Mentions of Develop with related words form the 1970 to 1979 corpus
 
-```{r}
+``` r
 distance_between_develop_other_words <- distance_between_words(all_words_only_1970, "develop") %>%
   select(id, sid, word, lemma, slength, distance_between_word_and_keyword, distance_from_keyword_percent) %>%
   anti_join(stop_words) %>%
@@ -184,25 +313,66 @@ distance_between_develop_other_words <- distance_between_words(all_words_only_19
   slice(215:n()) %>%
   arrange(-count) %>%
   filter(lemma != "develop")
+```
+
+    ## Joining, by = c("id", "sid")
+    ## Joining, by = c("id", "sid")
+
+    ## Joining, by = "word"
+
+``` r
 ggplot(distance_between_develop_other_words, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
   labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions")
+```
+
+![](Global_South_Winter_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+``` r
 # that thing sitting all alone at 21 k is "country" unsurprisingly
 ggplot(distance_between_develop_other_words %>% filter(lemma != "country"), mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
   labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions (minus country)")
+```
+
+![](Global_South_Winter_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
+
+``` r
 kable(distance_between_develop_other_words %>% slice(1:15))
 ```
 
-We had previously only looked at 1970 to 1979. Develop is super meaty, so we'll try to do some analysis on stuff way after 1979. We should expect to see some significant differences in the language of say, the 2000s compared to the language of the 1970s. 
+| lemma         | count | mean(distance\_from\_keyword\_percent) |
+| :------------ | ----: | -------------------------------------: |
+| country       | 11370 |                              0.1529402 |
+| economic      |  4871 |                              0.2723424 |
+| international |  4538 |                              0.3092513 |
+| pron          |  4420 |                              0.5490999 |
+| the           |  3647 |                              0.4897497 |
+| world         |  3626 |                              0.3216598 |
+| united        |  2480 |                              0.3057610 |
+| nations       |  2216 |                              0.2819746 |
+| people        |  1775 |                              0.3448721 |
+| operation     |  1755 |                              0.2675153 |
+| states        |  1380 |                              0.3348484 |
+| nation        |  1359 |                              0.2497759 |
+| peace         |  1345 |                              0.3465467 |
+| resource      |  1335 |                              0.3011712 |
+| social        |  1332 |                              0.2080895 |
 
-Lets get an annotated corpus over 2000 to 2009. 
+We had previously only looked at 1970 to 1979. Develop is super meaty,
+so we’ll try to do some analysis on stuff way after 1979. We should
+expect to see some significant differences in the language of say, the
+2000s compared to the language of the 1970s.
+
+Lets get an annotated corpus over 2000 to 2009.
 
 ITS GONE NOW AND HAS MOVED WAY UP TO THE START SETUP
 
-Now lets look at develop and compare it to 1970s stuff. Especially in the context of a specific nation, say Indonesia. 
+Now lets look at develop and compare it to 1970s stuff. Especially in
+the context of a specific nation, say
+Indonesia.
 
-```{r}
+``` r
 distance_between_develop_other_words_2k <- distance_between_words(all_words_only_2k, "develop") %>%
   select(id, sid, word, lemma, slength, distance_between_word_and_keyword, distance_from_keyword_percent) %>%
   anti_join(stop_words) %>%
@@ -211,22 +381,57 @@ distance_between_develop_other_words_2k <- distance_between_words(all_words_only
   slice(87:n()) %>%
   arrange(-count) %>%
   filter(lemma != "develop")
+```
+
+    ## Joining, by = c("id", "sid")
+    ## Joining, by = c("id", "sid")
+
+    ## Joining, by = "word"
+
+``` r
 ggplot(distance_between_develop_other_words_2k, mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
   labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions in 2000s")
+```
+
+![](Global_South_Winter_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+``` r
 # that thing sitting all alone at 8.8 k is "country" unsurprisingly
 ggplot(distance_between_develop_other_words_2k %>% filter(lemma != "country"), mapping = aes(`count`, `mean(distance_from_keyword_percent)`)) +
   geom_point() +
   labs(x = "Number of Mentions of Word", y = "Average Distance from Keyword", title = "Relative distance from relative keyword (Develop) versus mentions (minus country) in 2000s")
+```
+
+![](Global_South_Winter_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
+
+``` r
 kable(distance_between_develop_other_words_2k %>% slice(1:15))
 ```
 
+| lemma         | count | mean(distance\_from\_keyword\_percent) |
+| :------------ | ----: | -------------------------------------: |
+| country       |  6553 |                              0.1784306 |
+| pron          |  4768 |                              0.5871054 |
+| international |  3425 |                              0.3366388 |
+| the           |  2843 |                              0.5399266 |
+| world         |  2731 |                              0.2933059 |
+| economic      |  2653 |                              0.2317195 |
+| united        |  2599 |                              0.3692089 |
+| nations       |  2451 |                              0.3546518 |
+| peace         |  2018 |                              0.2618614 |
+| security      |  1862 |                              0.2675499 |
+| sustainable   |  1833 |                              0.0722118 |
+| millennium    |  1670 |                              0.1405439 |
+| human         |  1560 |                              0.2354107 |
+| states        |  1449 |                              0.2521979 |
+| global        |  1441 |                              0.3216451 |
 
 # TFIDF
 
-The most recent breakthrough has been on TFIDF. 
+The most recent breakthrough has been on TFIDF.
 
-```{r}
+``` r
 #List of countries for filtering
 country_filter <- str_to_lower(pull(codelist, country.name.en)) 
 # I DONT WANT TO STEM RIGHT NOW. THAT MEANS RIGHT AND RIGHTS ARE DIFFERENT THINGS
@@ -280,123 +485,336 @@ printer_producer <- function(dataframe) {
 }
 ```
 
-## TFIDF for stuff related to govern. 
+## TFIDF for stuff related to govern.
 
 Single sentence.
 
-```{r}
+``` r
 # note that this produces an unstemmed all_words_only. 
 sentences_mention_govern <- sentences_with_keyword(all_words_only, "govern")
+```
+
+    ## Joining, by = c("id", "sid")
+
+``` r
 num_words_in_each_speech_mentioning_govern <- sentences_mention_govern %>% 
   count(id, lemma) %>% 
   group_by(id) %>%
   summarize(`words in speech` = sum(n))
 mentions_of_aux_words_in_sentences_containing_govern <- left_join(sentences_mention_govern %>% count(id, lemma), num_words_in_each_speech_mentioning_govern) %>%
   separate(id, c("Country", "Session", "Year"), remove = FALSE)
+```
+
+    ## Joining, by = "id"
+
+``` r
 # tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 1970, 9) %>% select(-Year, -Session, -Country) is equal to govern_full_tfidf_1970_ided
 # furthermore, all of the govern_xxxxs equals the previous govern_full_tfidf_xxxx_yeared I previously had. Thus, it is the proper implimentation. 
 govern_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 1970, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 govern_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 1980, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 govern_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 1990, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 govern_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 2000, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 govern_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_govern, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 #View(bind_rows(printer_producer(govern_1970s), printer_producer(govern_1980s), printer_producer(govern_1990s), printer_producer(govern_2000s), printer_producer(govern_2010s)))
 ```
 
-Local Sentences included. 
+Local Sentences
+included.
 
-```{r}
+``` r
 local_sentences_mention_govern <- local_sentences_with_keyword(all_words_only, "govern")
+```
+
+    ## Joining, by = c("id", "sid")
+
+``` r
 num_words_insentences_locally_mentioning_govern <- local_sentences_mention_govern %>% 
   count(id, lemma) %>% 
   group_by(id) %>%
   summarize(`words in speech` = sum(n))
 mentions_of_aux_words_in_localsentences_containing_govern <- left_join(local_sentences_mention_govern %>% count(id, lemma), num_words_insentences_locally_mentioning_govern) %>%
   separate(id, c("Country", "Session", "Year"), remove = FALSE)
+```
+
+    ## Joining, by = "id"
+
+``` r
 extended_govern_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_govern, 1970, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_govern_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_govern, 1980, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_govern_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_govern, 1990, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_govern_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_govern, 2000, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_govern_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_govern, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 #View(bind_rows(printer_producer(extended_govern_1970s), printer_producer(extended_govern_1980s), printer_producer(extended_govern_1990s), printer_producer(extended_govern_2000s), printer_producer(extended_govern_2010s)))
 ```
 
 ## TFIDF for stuff related to Develop
 
-Single sentence. 
+Single sentence.
 
-```{r}
+``` r
 # note that this produces an unstemmed all_words_only. 
 sentences_mention_develop <- sentences_with_keyword(all_words_only, "develop")
+```
+
+    ## Joining, by = c("id", "sid")
+
+``` r
 num_words_in_each_speech_mentioning_develop <- sentences_mention_develop %>% 
   count(id, lemma) %>% 
   group_by(id) %>% 
   summarize(`words in speech` = sum(n))
 mentions_of_aux_words_in_sentences_containing_develop <- left_join(sentences_mention_develop %>% count(id, lemma), num_words_in_each_speech_mentioning_develop) %>%
   separate(id, c("Country", "Session", "Year"), remove = FALSE)
+```
+
+    ## Joining, by = "id"
+
+``` r
 develop_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_develop, 1970, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 develop_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_develop, 1980, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 develop_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_develop, 1990, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 develop_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_develop, 2000, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 develop_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_develop, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 #View(bind_rows(printer_producer(develop_1970s %>% filter(lemma != "lucia")), printer_producer(develop_1980s), printer_producer(develop_1990s), printer_producer(develop_2000s),printer_producer(develop_2010s)))
 ```
 
-Local sentences included. 
+Local sentences
+included.
 
-```{r}
+``` r
 local_sentences_mention_develop <- local_sentences_with_keyword(all_words_only, "develop")
+```
+
+    ## Joining, by = c("id", "sid")
+
+``` r
 num_words_insentences_locally_mentioning_develop <- local_sentences_mention_develop %>% 
   count(id, lemma) %>% 
   group_by(id) %>%
   summarize(`words in speech` = sum(n))
 mentions_of_aux_words_in_localsentences_containing_develop <- left_join(local_sentences_mention_develop %>% count(id, lemma), num_words_insentences_locally_mentioning_develop) %>%
   separate(id, c("Country", "Session", "Year"), remove = FALSE)
+```
+
+    ## Joining, by = "id"
+
+``` r
 extended_develop_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_develop, 1970, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_develop_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_develop, 1980, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_develop_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_develop, 1990, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_develop_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_develop, 2000, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_develop_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_develop, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 #View(bind_rows(printer_producer(extended_develop_1970s), printer_producer(extended_develop_1980s), printer_producer(extended_develop_1990s), printer_producer(extended_develop_2000s), printer_producer(extended_develop_2010s)))
 ```
 
 ## TFIDF for stuff related to Rights
 
-Single sentence. 
+Single sentence.
 
-```{r}
+``` r
 # "rights" gets lemma'ed to "right"
 # "Rights" gets lemma'ed to "rights." I do some overriding to get them to be the same in this context.
 sentences_mention_right <- sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "rights", "right", lemma)), "right")
+```
+
+    ## Joining, by = c("id", "sid")
+
+``` r
 num_words_in_each_speech_mentioning_right <- sentences_mention_right %>%  
   count(id, lemma) %>% 
   group_by(id) %>% 
   summarize(`words in speech` = sum(n))
 mentions_of_aux_words_in_sentences_containing_right <- left_join(sentences_mention_right %>% count(id, lemma), num_words_in_each_speech_mentioning_right) %>%
   separate(id, c("Country", "Session", "Year"), remove = FALSE)
+```
+
+    ## Joining, by = "id"
+
+``` r
 right_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_right, 1970, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 right_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_right, 1980, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 right_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_right, 1990, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 right_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_right, 2000, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 right_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_right, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 #View(bind_rows(printer_producer(right_1970s), printer_producer(right_1980s), printer_producer(right_1990s), printer_producer(right_2000s),printer_producer(right_2010s)))
 ```
 
-Local sentences included. 
+Local sentences
+included.
 
-```{r}
+``` r
 local_sentences_mention_right <- local_sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "rights", "right", lemma)), "right")
+```
+
+    ## Joining, by = c("id", "sid")
+
+``` r
 num_words_insentences_locally_mentioning_right <- local_sentences_mention_right %>% 
   count(id, lemma) %>% 
   group_by(id) %>%
   summarize(`words in speech` = sum(n))
 mentions_of_aux_words_in_localsentences_containing_right <- left_join(local_sentences_mention_right %>% count(id, lemma), num_words_insentences_locally_mentioning_right) %>%
   separate(id, c("Country", "Session", "Year"), remove = FALSE)
+```
+
+    ## Joining, by = "id"
+
+``` r
 extended_right_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_right, 1970, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_right_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_right, 1980, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_right_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_right, 1990, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_right_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_right, 2000, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_right_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_right, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 #View(bind_rows(printer_producer(extended_right_1970s), printer_producer(extended_right_1980s), printer_producer(extended_right_1990s), printer_producer(extended_right_2000s), printer_producer(extended_right_2010s)))
 ```
 
@@ -404,80 +822,172 @@ extended_right_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_i
 
 Relevant Words:
 
-* capability, mentioned 1674 times
-* capable, mentioned 1933 times
-* capacity, mentioned 5748 times
-* ability, mentioned 3239 times. I do not include this in my calculation however. 
+  - capability, mentioned 1674 times
+  - capable, mentioned 1933 times
+  - capacity, mentioned 5748 times
+  - ability, mentioned 3239 times. I do not include this in my
+    calculation however.
 
 in comparison:
 
-* right, mentioned 48186 times
-* develop, mentioned 113759 times
-* govern, 47939
+  - right, mentioned 48186 times
+  - develop, mentioned 113759 times
+  - govern, 47939
 
-I found this out by running the following code with view around it and without slice. I found the counts of words using the command f function. 
+I found this out by running the following code with view around it and
+without slice. I found the counts of words using the command f
+function.
 
-```{r}
+``` r
 all_words_only %>% count(lemma) %>% arrange(desc(n)) %>% anti_join(stop_words, by = c("lemma" = "word")) %>% slice(1:10)
 ```
 
+    ## # A tibble: 10 x 2
+    ##    lemma                 n
+    ##    <chr>             <int>
+    ##  1 "pron"          1046873
+    ##  2 "country"        130252
+    ##  3 "united"         127087
+    ##  4 "international"  122565
+    ##  5 "develop"        113759
+    ##  6 "nations"        110265
+    ##  7 "world"           95987
+    ##  8 "people"          89483
+    ##  9 ""                87767
+    ## 10 "peace"           81913
+
 To check in the future. Look at these for just one sentence. Lemmas
 
-* responsibility, mentions 14k 
-* dialogue, 11k
-* **sustainable	, 11k**
-* **solidarity, 8k**
-* **resilience + resilient + resiliency combined.** 
+  - responsibility, mentions 14k
+  - dialogue, 11k
+  - **sustainable , 11k**
+  - **solidarity, 8k**
+  - **resilience + resilient + resiliency combined.**
 
-Single sentence. 
+Single
+sentence.
 
-```{r}
+``` r
 sentences_mention_capability <- sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "capable", "capability", lemma)) %>% mutate(lemma = if_else(lemma == "capacity", "capability", lemma)), "capability")
+```
+
+    ## Joining, by = c("id", "sid")
+
+``` r
 num_words_in_each_speech_mentioning_capability <- sentences_mention_capability %>%  
   count(id, lemma) %>% 
   group_by(id) %>% 
   summarize(`words in speech` = sum(n))
 mentions_of_aux_words_in_sentences_containing_capability <- left_join(sentences_mention_capability %>% count(id, lemma), num_words_in_each_speech_mentioning_capability) %>%
   separate(id, c("Country", "Session", "Year"), remove = FALSE)
+```
+
+    ## Joining, by = "id"
+
+``` r
 capability_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_capability, 1970, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 capability_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_capability, 1980, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 capability_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_capability, 1990, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 capability_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_capability, 2000, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 capability_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_capability, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 #View(bind_rows(printer_producer(capability_1970s), printer_producer(capability_1980s), printer_producer(capability_1990s), printer_producer(capability_2000s),printer_producer(capability_2010s)))
 ```
 
-Local sentences included. 
+Local sentences
+included.
 
-```{r}
+``` r
 local_sentences_mention_capability <- local_sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "capable", "capability", lemma)) %>% mutate(lemma = if_else(lemma == "capacity", "capability", lemma)), "capability")
+```
+
+    ## Joining, by = c("id", "sid")
+
+``` r
 num_words_insentences_locally_mentioning_capability <- local_sentences_mention_capability %>% 
   count(id, lemma) %>% 
   group_by(id) %>%
   summarize(`words in speech` = sum(n))
 mentions_of_aux_words_in_localsentences_containing_capability <- left_join(local_sentences_mention_capability %>% count(id, lemma), num_words_insentences_locally_mentioning_capability) %>%
   separate(id, c("Country", "Session", "Year"), remove = FALSE)
+```
+
+    ## Joining, by = "id"
+
+``` r
 extended_capability_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_capability, 1970, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_capability_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_capability, 1980, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_capability_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_capability, 1990, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_capability_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_capability, 2000, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 extended_capability_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_localsentences_containing_capability, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+    ## Selecting by ratio
+
+``` r
 #View(bind_rows(printer_producer(extended_capability_1970s), printer_producer(extended_capability_1980s), printer_producer(extended_capability_1990s), printer_producer(extended_capability_2000s), printer_producer(extended_capability_2010s)))
 ```
 
-Feb 5 2020
-We need to think about extra sentences as going farther out in terms of accuracy of the valance key words. Single sentence gives us the core language surrounding the keyword. If you were to argue the greater sentences, you'd argue that they are less convincing but still substantive. 
+Feb 5 2020 We need to think about extra sentences as going farther out
+in terms of accuracy of the valance key words. Single sentence gives us
+the core language surrounding the keyword. If you were to argue the
+greater sentences, you’d argue that they are less convincing but still
+substantive.
 
+Govern, capability are working capability is the only one that had
+really useful insight on extra sentences.
 
-Govern, capability are working
-capability is the only one that had really useful insight on extra sentences. 
+Development is working alright in showing a difference.
 
-Development is working alright in showing a difference. 
+Rights didnt work well for us period. It’s not helpful.
 
-Rights didnt work well for us period. It's not helpful.
+The single sentence was fundamental and core. The extended sentences
+will function as a helper context.
 
-The single sentence was fundamental and core. The extended sentences will function as a helper context. 
-
-
-rerun the big chunk above for rights and capibailities
-adjust the words from funciton to look at sentence before and after especially for govern_1970s
+rerun the big chunk above for rights and capibailities adjust the words
+from funciton to look at sentence before and after especially for
+govern\_1970s
