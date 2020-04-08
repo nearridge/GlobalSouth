@@ -21,6 +21,7 @@ library(knitr)
 library(readr)
 library(here)
 library(excelR)
+library(scales)
 
 # Relevant to data formatting
 library(lubridate)
@@ -307,6 +308,16 @@ tfidf_aux_word_organizer <- function(df_of_tfidf_of_every_individual_word) {
            & lemma != "'s") %>% group_by(Year) %>% top_n(n = 10) 
   return(df_of_tfidf_of_every_individual_word)
 }
+across <- function(dataframe) {
+  dataframe <- dataframe %>% 
+    arrange(-desc(Year))
+  data1 <- list()
+  for (i in seq(as.double(min(dataframe$Year)), as.double(max(dataframe$Year)))) {
+    data1 <- bind_cols(data1, dataframe %>% filter(Year == i))
+  }
+  return(data1)
+}
+
 printer_producer <- function(dataframe) {
   dataframe <- dataframe %>% 
     arrange(-desc(Year))
@@ -455,7 +466,7 @@ right_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentenc
 
 Local sentences included. 
 
-```{r}
+```{r message = FALSE}
 local_sentences_mention_right <- local_sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "rights", "right", lemma)), "right")
 num_words_insentences_locally_mentioning_right <- local_sentences_mention_right %>% 
   count(id, lemma) %>% 
@@ -482,7 +493,7 @@ Relevant Words:
 
 Single sentence. 
 
-```{r}
+```{r message = FALSE}
 sentences_mention_capability <- sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "capable", "capability", lemma)) %>% mutate(lemma = if_else(lemma == "capacity", "capability", lemma)), "capability")
 num_words_in_each_speech_mentioning_capability <- sentences_mention_capability %>%  
   count(id, lemma) %>% 
@@ -500,7 +511,7 @@ capability_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_se
 
 Local sentences included. 
 
-```{r}
+```{r message = FALSE}
 local_sentences_mention_capability <- local_sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "capable", "capability", lemma)) %>% mutate(lemma = if_else(lemma == "capacity", "capability", lemma)), "capability")
 num_words_insentences_locally_mentioning_capability <- local_sentences_mention_capability %>% 
   count(id, lemma) %>% 
@@ -532,11 +543,14 @@ To check in the future. Look at these for just one sentence. Lemmas
 
 * responsibility, mentions 14k 
 * dialogue, 11k
+ ** Barbados in 1976 said this and directly said north south. Something interesting about dialogue. "In this connexion the so-called North-South dialogue taking place in Paris, the Conference on International Economic Co-operation, must attempt to find answers to the problems developing countries are facing in the four broad areas being dealt with by the commissions, that is, those on energy, raw materials, development and financial affairs."
+ ** GBR in 1976 as well. "The Conference on International Economic Co-operation has now resumed its detailed work in the four critical areas of energy, raw materials, development, and finance; and I hope that this work will culminate in a successful ministerial conference at the end of the year and in a major and positive step forward in the north-south dialogue."
+ ** IDN in 1976 had a spicy north south sentence, but it didn't have dialogue in it. 
 * **sustainable	, 11k**
 * **solidarity, 8k**
 * **resilience + resilient + resiliency combined.** 
 
-```{r}
+```{r message = FALSE}
 sentences_mention_responsibility <- sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "responsible", "responsibility", lemma)), "responsibility")
 num_words_in_each_speech_mentioning_responsibility <- sentences_mention_responsibility %>%  
   count(id, lemma) %>% 
@@ -556,7 +570,157 @@ responsibility_alltime <- bind_rows(printer_producer(responsibility_1970s), prin
 excelTable(responsibility_alltime, editable = FALSE, pagination = 20)
 ```
 
+Dialogue
 
+```{r message = FALSE}
+sentences_mention_dialogue <- sentences_with_keyword(all_words_only, "dialogue")
+num_words_in_each_speech_mentioning_dialogue <- sentences_mention_dialogue %>%  
+  count(id, lemma) %>% 
+  group_by(id) %>% 
+  summarize(`words in speech` = sum(n))
+mentions_of_aux_words_in_sentences_containing_dialogue <- left_join(sentences_mention_dialogue %>% count(id, lemma), num_words_in_each_speech_mentioning_dialogue) %>%
+  separate(id, c("Country", "Session", "Year"), remove = FALSE)
+dialogue_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_dialogue, 1970, 9) %>% select(-Year, -Session, -Country))
+dialogue_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_dialogue, 1980, 9) %>% select(-Year, -Session, -Country))
+dialogue_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_dialogue, 1990, 9) %>% select(-Year, -Session, -Country))
+dialogue_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_dialogue, 2000, 9) %>% select(-Year, -Session, -Country))
+dialogue_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_dialogue, 2010, 9) %>% select(-Year, -Session, -Country))
+```
+
+Mentions of the word dialogue over time. This informs when people are using dialogue and when does it really solidly enter vocabulary. It also explains why it's kind of hard to figure out the precise vocabularies surrounding dialogue. It isn't even mentioned until 1972, and isn't solidly in the vocab until the 1980s. 
+
+```{r}
+dialogue_mentions_overtime <- annotated_imported_speeches %>%
+  anti_join(UN_stop_words, by = c("lemma" = "words")) %>%
+  filter(lemma == "dialogue") %>%
+  group_by(Year, lemma) %>%
+  count() %>%
+  ungroup()
+
+ggplot(data = dialogue_mentions_overtime, mapping = aes(x = Year, y = n, group= 1)) +
+  geom_path() +
+  labs(title = "Count of mentions of dialogue over time at the UN", x = "Year", y = "Count")
+```
+
+Sustainable
+
+```{r message = FALSE}
+sentences_mention_sustainable <- sentences_with_keyword(all_words_only, "sustainable")
+num_words_in_each_speech_mentioning_sustainable <- sentences_mention_sustainable %>%  
+  count(id, lemma) %>% 
+  group_by(id) %>% 
+  summarize(`words in speech` = sum(n))
+mentions_of_aux_words_in_sentences_containing_sustainable <- left_join(sentences_mention_sustainable %>% count(id, lemma), num_words_in_each_speech_mentioning_sustainable) %>%
+  separate(id, c("Country", "Session", "Year"), remove = FALSE)
+sustainable_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_sustainable, 1970, 9) %>% select(-Year, -Session, -Country))
+sustainable_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_sustainable, 1980, 9) %>% select(-Year, -Session, -Country))
+sustainable_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_sustainable, 1990, 9) %>% select(-Year, -Session, -Country))
+sustainable_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_sustainable, 2000, 9) %>% select(-Year, -Session, -Country))
+sustainable_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_sustainable, 2010, 9) %>% select(-Year, -Session, -Country))
+
+sustainable_alltime <- bind_rows(printer_producer(sustainable_1970s), printer_producer(sustainable_1980s), printer_producer(sustainable_1990s), printer_producer(sustainable_2000s), 
+                                 printer_producer(sustainable_2010s))
+
+excelTable(sustainable_alltime, editable = FALSE, pagination = 20)
+```
+
+```{r}
+sustainable_mentions_overtime <- annotated_imported_speeches %>%
+  anti_join(UN_stop_words, by = c("lemma" = "words")) %>%
+  filter(lemma == "sustainable") %>%
+  group_by(Year, lemma) %>%
+  count() %>%
+  ungroup()
+
+ggplot(data = sustainable_mentions_overtime, mapping = aes(x = Year, y = n, group= 1)) +
+  geom_path() +
+  labs(title = "Count of mentions of sustainable over time at the UN", x = "Year", y = "Count")
+```
+
+solidarity
+
+```{r message = FALSE}
+sentences_mention_solidarity <- sentences_with_keyword(all_words_only, "solidarity")
+num_words_in_each_speech_mentioning_solidarity <- sentences_mention_solidarity %>%  
+  count(id, lemma) %>% 
+  group_by(id) %>% 
+  summarize(`words in speech` = sum(n))
+mentions_of_aux_words_in_sentences_containing_solidarity <- left_join(sentences_mention_solidarity %>% count(id, lemma), num_words_in_each_speech_mentioning_solidarity) %>%
+  separate(id, c("Country", "Session", "Year"), remove = FALSE)
+solidarity_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_solidarity, 1970, 9) %>% select(-Year, -Session, -Country))
+solidarity_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_solidarity, 1980, 9) %>% select(-Year, -Session, -Country))
+solidarity_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_solidarity, 1990, 9) %>% select(-Year, -Session, -Country))
+solidarity_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_solidarity, 2000, 9) %>% select(-Year, -Session, -Country))
+solidarity_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_solidarity, 2010, 9) %>% select(-Year, -Session, -Country))
+
+solidarity_alltime <- bind_rows(printer_producer(solidarity_1970s), printer_producer(solidarity_1980s), printer_producer(solidarity_1990s), printer_producer(solidarity_2000s), 
+                                 printer_producer(solidarity_2010s))
+
+solidarity_alltime_excel <- bind_rows(exceler(solidarity_1970s), exceler(solidarity_1980s), exceler(solidarity_1990s), exceler(solidarity_2000s), 
+                                 exceler(solidarity_2010s))
+
+excelTable(solidarity_alltime, editable = FALSE, pagination = 20)
+```
+
+```{r}
+solidarity_mentions_overtime <- annotated_imported_speeches %>%
+  anti_join(UN_stop_words, by = c("lemma" = "words")) %>%
+  filter(lemma == "solidarity") %>%
+  group_by(Year, lemma) %>%
+  count() %>%
+  ungroup()
+
+ggplot(data = solidarity_mentions_overtime, mapping = aes(x = Year, y = n, group= 1)) +
+  geom_path() +
+  labs(title = "Count of mentions of solidarity over time at the UN", x = "Year", y = "Count")
+```
+
+Solidarity is helpful. While sustainable is a word on the rise, solidarity is a word on decline. It was a very key word in the 3rd word era. Countries would talk about solidarity with the cubans and vietanmese in their struggle against the US imperialists and stuff. We see vietnam and cuba in the tfidf in 1970s. Palestinians as well. Conference of the Heads of State or Government of Non-Aligned Countries was held in Colombo in 1976 so you get solidarity having colombo as a key word then. Those kinds of words sorta fall off. You still have libyan and palestinian in 2010, but you also have refugee, climate, migrant, society, hope, dialogue. People know solidarity to be a key 3rd word era word. This shows us that it's weaker in the 21st century, but more or less has a totally different set of things. In between there is definately a sort of transition in 1980s that retains some 1970s. Struggle disappears in 1995 and the word solidarity was used to invoke struggle. The fact that it dissapeares since then is significant. (We would need to check to make sure that it's used a lot in the 1970s and early 1980s.)
+
+resilience + resilient + resiliency combined
+
+```{r message = FALSE}
+sentences_mention_resiliency <- sentences_with_keyword(all_words_only %>% mutate(lemma = if_else(lemma == "resilience", "resiliency", lemma)) %>% mutate(lemma = if_else(lemma == "resilient", "resiliency", lemma)), "resiliency")
+num_words_in_each_speech_mentioning_resiliency <- sentences_mention_resiliency %>%  
+  count(id, lemma) %>% 
+  group_by(id) %>% 
+  summarize(`words in speech` = sum(n))
+mentions_of_aux_words_in_sentences_containing_resiliency <- left_join(sentences_mention_resiliency %>% count(id, lemma), num_words_in_each_speech_mentioning_resiliency) %>%
+  separate(id, c("Country", "Session", "Year"), remove = FALSE)
+resiliency_1970s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_resiliency, 1970, 9) %>% select(-Year, -Session, -Country))
+resiliency_1980s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_resiliency, 1980, 9) %>% select(-Year, -Session, -Country))
+resiliency_1990s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_resiliency, 1990, 9) %>% select(-Year, -Session, -Country))
+resiliency_2000s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_resiliency, 2000, 9) %>% select(-Year, -Session, -Country))
+resiliency_2010s <- tfidf_aux_word_organizer(tfidfer(mentions_of_aux_words_in_sentences_containing_resiliency, 2010, 9) %>% select(-Year, -Session, -Country))
+
+resiliency_alltime <- bind_rows(exceler(resiliency_1970s), exceler(resiliency_1980s), exceler(resiliency_1990s), exceler(resiliency_2000s), 
+                                 exceler(resiliency_2010s))
+
+excelTable(resiliency_alltime, editable = FALSE, pagination = 20)
+```
+
+```{r}
+resiliency_mentions_overtime <- annotated_imported_speeches %>%
+  anti_join(UN_stop_words, by = c("lemma" = "words")) %>%
+  filter(lemma == "resilience") %>%
+  group_by(Year, lemma) %>%
+  count() %>%
+  ungroup()
+
+ggplot(data = resiliency_mentions_overtime, mapping = aes(x = Year, y = n, group= 1)) +
+  geom_path() +
+  labs(title = "Count of mentions of resiliency over time at the UN", x = "Year", y = "Count")
+```
+
+March 3 2020
+
+There are thee stories with sustainable, 1) word no one used then they started using it. 2) environmental usage over time morphs into more sets of 3) words that come to relate to political economy.
+
+Responsability is alllll over the place. While it is important (as evidenced by it's highly vaired usage), It's not a key word that helps us situate the global south. We get R2P stuff whcih is interesting. It's a "word that does different kinds of work." It's used kind of randomly in 1970 and kind of ranodmly in 2010. The kind of random is different for sure, but it's hard to draw a narrative out of the randomness. 
+
+Dialogue is similar to responsabilit. It led us to the Conference on International economic cooperation in 1976 which is now known as the north-south conference. It tells us about cliamate dialogue, but that useless.
+
+Solidarity is helpful. While sustainable is a word on the rise, it's now a word on decline. It was a very key word in the 3rd word era. Countries would talk about solidarity with the cubans and vietanmese in their struggle against the US imperialists and stuff. We see vietnam and cuba in the tfidf in 1970s. Palestinians as well. Conference of the Heads of State or Government of Non-Aligned Countries was held in Colombo in 1976 so you get solidarity having colombo as a key word then. Those kinds of words sorta fall off. You still have libyan and palestinian in 2010, but you also have refugee, climate, migrant, society, hope, dialogue. People know solidarity to be a key 3rd word era word. This shows us that it's weaker in the 21st century, but more or less has a totally different set of things. In between
 
 Feb 5 2020
 We need to think about extra sentences as going farther out in terms of accuracy of the valance key words. Single sentence gives us the core language surrounding the keyword. If you were to argue the greater sentences, you'd argue that they are less convincing but still substantive. 
